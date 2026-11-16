@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rost Production Tools 4.0 — гайд</title>
+<title>Rost Production Tools 4.1 — гайд</title>
 <style>
 :root{--bg:#f6f7f9;--panel:#ffffff;--ink:#1c2128;--mute:#5b6572;--line:#d9dee5;--accent:#0b7fb5;--accent2:#e07b1a;--code:#eef1f5;--shot:#14171c;--warn:#fff4e0;--warnline:#e9b45f;--ok:#e6f5ec;--okline:#5bb381;--bad:#fdeaea;--badline:#e08a8a}
 html[data-theme=dark]{--bg:#0f1216;--panel:#171b21;--ink:#e6e9ee;--mute:#9aa4b0;--line:#2a313a;--accent:#4cb8ea;--accent2:#f09a46;--code:#1f252d;--shot:#0a0c0f;--warn:#2b2210;--warnline:#8a6a2a;--ok:#12261b;--okline:#2f7a52;--bad:#2c1515;--badline:#8a3a3a}
@@ -64,9 +64,9 @@ td:first-child{white-space:nowrap}
 </head>
 <body>
 <div class="wrap">
-<nav id="toc"><b>Rost Production Tools 4.0</b></nav>
+<nav id="toc"><b>Rost Production Tools 4.1</b></nav>
 <main>
-<h1>Rost Production Tools 4.0 — гайд</h1>
+<h1>Rost Production Tools 4.1 — гайд</h1>
 <p class="lead">Аддон для Blender 5.2: STEP-конвеєр, авториг, світло, HUD-графіка, пас-рендер. Усе нижче запущено на тестовій сцені (помаранчевий пристрій з ручкою, куполом і панеллю); що не вдалося перевірити — позначено <b>«Не перевірено»</b>.</p>
 
 <div class="what"><b class="t">Встановлення</b>
@@ -125,8 +125,8 @@ td:first-child{white-space:nowrap}
 
 <div class="unv">Запущено лише на одному файлі (6500CO0604). Інші STEP, режим без галочки «Нова сцена» і Materials only/Rig only окремо — не проганялися.</div>
 
-<h2 id="rig">2. CAD Auto-Rig</h2>
-<div class="what"><b class="t">Що це</b>Кнопка в Production Tools → блок <b>Rigging</b>. Будує арматуру для будь-якої моделі з окремих мешів: по кістці <code>B_&lt;імʼя меша&gt;</code> на кожен виділений меш у його півоті.</div>
+<h2 id="rig">2. CAD Auto-Rig (UE)</h2>
+<div class="what"><b class="t">Що це</b>Кнопка в Production Tools → блок <b>Rigging</b>. Будує арматуру для будь-якої моделі з окремих мешів: по кістці <code>B_&lt;імʼя меша&gt;</code> на кожен виділений меш у його півоті. Інструмент розрахований на <b>сантиметрові сцени для експорту в Unreal Engine</b> (звідси «(UE)» у назві).</div>
 <div class="split">
 <div class="shot"><div class="im"><img src="img/tools-01-panel.png" alt="Production Tools з налаштуваннями ригу"></div><div class="cap">Production Tools: блок Rigging з розгорнутими «Налаштування».</div></div>
 <div>
@@ -134,10 +134,11 @@ td:first-child{white-space:nowrap}
 <ul>
 <li>Арматура <code>Armature</code> (імʼя фіксоване — так Unreal не додає зайву кореневу кістку) і корінь <code>RigRoot</code>.</li>
 <li>Кістка <code>B_&lt;mesh&gt;</code> на кожен меш; ієрархія кісток = ієрархія обʼєктів.</li>
-<li>Кожен меш отримує vertex group і модифікатор Armature.</li>
+<li>За замовчуванням меші кріпляться <b>до кісток як до батька</b> (Parent Type = Bone), без vertex groups і модифікатора Armature. Режим <b>Vertex groups (для експорту в UE)</b> у налаштуваннях повертає vertex group + Armature modifier, потрібні для FBX skeletal mesh.</li>
 <li>Кріплення, імена яких починаються з патерна (<b>Кріплення</b>, типово <code>STK-</code>) → кістка-кільце (з автоосью).</li>
 <li>Empty → допоміжні кістки, не деформують. Колекція <code>NoBone</code> або властивість <code>no_bone</code> → деталь їде з кісткою батька.</li>
-<li>Повторний запуск безпечний: імена кісток не змінюються, анімація лишається.</li></ul></div></div>
+<li>Повторний запуск безпечний: імена кісток не змінюються, анімація лишається; позу перед повторним зчитуванням скинуто, тож спокій не зсувається.</li>
+<li>Контракт імен для Unreal: <code>Armature</code> / <code>RigRoot</code> / <code>B_&lt;mesh&gt;</code>. Якщо в файлі вже є інший обʼєкт <code>Armature</code>, він автоматично перейменовується (<code>Armature_&lt;сцена&gt;</code> / <code>Armature_old</code>), а нова арматура завжди називається <code>Armature</code>.</li></ul></div></div>
 
 <h3>Крок за кроком</h3>
 <div class="row">
@@ -157,11 +158,12 @@ td:first-child{white-space:nowrap}
 <tr><td>Допуск круглості</td><td>0.20 — наскільки меш має бути круглим, щоб вважатися кільцем. Також можна примусово: властивість <code>ring</code> = 1 / 0 на обʼєкті.</td></tr>
 <tr><td>Голова</td><td>Де ставиться голова кістки (типово — півот обʼєкта).</td></tr>
 <tr><td>Довжина × габарит, Мін / Макс</td><td>Довжина кістки = габарит × коефіцієнт, обмежена мін/макс (в одиницях сцени).</td></tr>
-<tr><td>Rot mode</td><td>Режим обертання кісток (типово Euler XYZ).</td></tr></table>
+<tr><td>Rot mode</td><td>Режим обертання кісток (типово Euler XYZ).</td></tr>
+<tr><td>Skin mode</td><td><b>Object</b> (типово, parenting до кістки) або <b>Vertex groups</b> (для експорту skeletal mesh в UE).</td></tr>
+<tr><td>Мін / Макс у см</td><td>Вимкнено за замовчуванням. Увімкни, якщо значення мін/макс задані в сантиметрах, а сцена в метрах: вони переводяться в одиниці сцени.</td></tr></table>
 
-<div class="bug">Кістка <code>RigRoot</code> вийшла довжиною ~10 одиниць: у метровій сцені вона «стирчить» на висоту будинку. Для скріншотів я вкоротив хвіст кістки в Edit Mode; на анімацію це не впливає.</div>
-<div class="bug">Якщо в файлі вже є обʼєкт з імʼям <code>Armature</code>, Blender назве нову арматуру <code>Armature.001</code> — контракт імені для Unreal порушиться. Перейменуй старий обʼєкт перед запуском.</div>
-<div class="unv">Перевірено на синтетичній збірці з руки/важелів і кріплень, не на реальній моделі STEP.</div>
+<div class="note">Довжина <code>RigRoot</code> тепер ≈ 0.25 × габарит моделі (раніше було фіксовано 10 одиниць, у метровій сцені кістка «стирчала» на висоту будинку).</div>
+<div class="unv">Перевірено на синтетичній збірці з руки/важелів і кріплень, не на реальній моделі STEP. Режим Object і звʼязка з STEP Pipeline (<code>exm_rig.py</code>) після зміни ще не проганялися на справжньому файлі.</div>
 <h2 id="light">3. Rost Light Rig</h2>
 <div class="what"><b class="t">Що це</b>Один набір світла на одній арматурі: фіксовані слоти <b>Main</b> (Key, Fill, Rim, Kicker, Top, Strip_L, Strip_R), <b>Additional</b> (6), <b>Spots</b> (4), <b>Points</b> (4). Стан кожної лампи пишеться в action — його можна анімувати, зберігати в пресети і переносити між сценами.</div>
 
@@ -222,7 +224,7 @@ td:first-child{white-space:nowrap}
 <div class="unv">Не знімав окремо: створення і налаштування слотів Spots та Points, Additional, анімація переходів у рендері «кадр за кадром» (перевірено лише кадри 1 і 60), перенесення пресета між файлами.</div>
 
 <h2 id="hud">4. HUD-графіка</h2>
-<p>Усі інструменти — Geometry Nodes-модифікатори з бібліотеки; додаються в позицію <b>3D-курсора</b>. Підписи рендеряться шрифтом HUD Style; кириличні і спецсимволи залежать від шрифту (мідна крапка «·» у шрифті Callout не зʼявилась — у тесті писав «-»).</p>
+<p>Усі інструменти — Geometry Nodes-модифікатори з бібліотеки; додаються в позицію <b>3D-курсора</b>. Підписи рендеряться шрифтом HUD Style; кириличні і спецсимволи залежать від шрифту (у стандартному Bfont Regular і в Artifakt Element Thin крапка «·» є; перевір свій шрифт, якщо символ не зʼявляється).</p>
 
 <h3 id="style">HUD Style</h3>
 <div class="what"><b class="t">Що це</b>Один обʼєкт <code>HUD_Style</code> зі спільними параметрами: товщина ліній, розмір шрифту, відступи, матеріали. Усі HUD-елементи, що «підключені до стилю», змінюються разом.</div>
@@ -251,7 +253,7 @@ td:first-child{white-space:nowrap}
 <div class="shot"><div class="im"><img src="img/callout-06-cutout.jpg" alt="Cutout"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Cutout: у корпусі й ручці прорізаний круглий отвір під кільцем, всередині — напівпрозоре «скло» (Ghost).</div></div>
 </div>
 <div class="split">
-<div class="shot"><div class="im"><img src="img/callout-07-panel.png" alt="Панель Callout"></div><div class="cap">Панель HUD Callout.</div></div>
+<div class="shot"><div class="im"><img src="img/callout-07-panel.png" alt="Панель Callout"></div><div class="cap">Панель HUD Callout: блок Timing (Static / Animated / Keyed, Timing і Animation кожного модифікатора, Stagger) під пресетами.</div></div>
 <div>
 <table><tr><th>Параметр</th><th>Що робить</th></tr>
 <tr><td>Align to Camera</td><td>Тримає кільце лицем до камери сцени.</td></tr>
@@ -285,7 +287,7 @@ td:first-child{white-space:nowrap}
 <tr><td>Add Angle</td><td>Object Mode: ставить кут у 3D-курсор (вісь Z курсора = вісь кута) і створює ручки <code>Angle_01_A</code>, <code>_B</code>, <code>_Label</code>.</td></tr>
 <tr><td>Diameter from Selection</td><td>Edit Mode: по виділеному колу/кільцю вершин створює діаметр.</td></tr>
 <tr><td>Angle from Selection, Outer</td><td>Edit Mode: кут по виділених ребрах; Outer — зовнішній (360° − кут).</td></tr></table>
-<div class="warn">Значення <b>Angle</b> у панелі — лише стартове (30°). Реальний кут бере з положення ручок A і B.</div></div></div>
+<div class="warn">Значення <b>Angle</b> у панелі — лише стартове (30°), поле неактивне, поки використовуються ручки. Реальний кут береться з положення ручок A і B і показується в панелі рядком «Кут з ручок A/B».</div></div></div>
 
 <h4>Angle: кут відкриття кришки</h4>
 <ol class="steps">
@@ -294,18 +296,18 @@ td:first-child{white-space:nowrap}
 <li>Ручку <code>_A</code> піднеси на нерухому деталь (корпус), ручку <code>_B</code> — на рухому (кришку), <code>_Label</code> — куди ставити підпис. Ручки батькуй до своїх деталей, щоб кут жив під час анімації.</li>
 <li>Увімкни <b>Face Camera</b>, щоб текст не був дзеркальним; підніми <b>Ray Length</b> і <b>Arc Radius</b> під масштаб.</li></ol>
 <div class="shot"><div class="im"><img src="img/measure-01-angle.jpg" alt="Кут кришки">
-<span class="mk" style="left:47%;top:32%">1</span><span class="mk" style="left:51.5%;top:41.7%">2</span><span class="mk" style="left:44%;top:58%">3</span><span class="mk" style="left:59%;top:46%">4</span></div>
+<span class="mk" style="left:28%;top:28%">1</span><span class="mk" style="left:57%;top:62%">2</span><span class="mk" style="left:50%;top:68%">3</span><span class="mk" style="left:66%;top:25%">4</span></div>
 <div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Кришка відкрита на 55°. <b>1</b> — підпис (55.0°), <b>2</b> — дуга зі стрілками, <b>3</b> — промінь A по корпусу, <b>4</b> — рухома кришка (ручка B).</div></div>
 
 <h4>Diameter: торець ручки</h4>
 <ol class="steps">
 <li>Edit Mode на меші ручки; виділи крайовий ring торця (колове коло вершин).</li>
 <li><b>Diameter from Selection</b>. Елемент <code>Diameter_01</code> зʼявляється в центрі кола на торці; повернення в Object Mode відбувається саме.</li>
-<li>У параметрах постав <b>Face Camera</b> і розмір шрифту; <b>Leader Length</b> і <b>Angle</b> керують положенням підпису.</li></ol>
-<div class="shot"><div class="im"><img src="img/measure-03-diameter.jpg" alt="Діаметр ручки"><span class="mk" style="left:56%;top:62%">1</span></div>
-<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span><b>1</b> — Ø 100.0 mm: діаметр ручки (радіус 50 мм) підписаний автоматично, діаметральна лінія зі стрілками.</div></div>
-<div class="bug">HUD лежить у площині виділеного кола. Якщо сусідня поверхня виступає далі (корпус перед торцем ручки), підпис, що виходить за коло, ховається за нею: на першому рендері було видно лише «Ø 10». Підніми <code>Diameter_N</code> по нормалі на кілька мм перед камерою.</div>
-<div class="bug">Ручка <b>Label</b> діаметра (<code>Diameter_01_Label</code>, Add Handles) у тесті не змінила положення підпису — залишилась на дефолтній позиції. Керуй підписом через Leader Length / Angle.</div>
+<li>У параметрах постав <b>Face Camera</b> і розмір шрифту. Кнопка <b>Add Handles</b> створює ручку <code>Diameter_01_Label</code> і вмикає стиль <b>Leader</b>: підпис із виносною лінією стає туди, де стоїть ручка. У стилях Across / Text Center ручка лише повертає лінію діаметра, на положення підпису вона не впливає.</li></ol>
+<div class="shot"><div class="im"><img src="img/measure-03-diameter.jpg" alt="Діаметр ручки"><span class="mk" style="left:86%;top:42%">1</span><span class="mk" style="left:61%;top:78%">2</span></div>
+<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span><b>1</b> — підпис Ø 100.0 mm з виносною лінією (Style = Leader, після Add Handles), <b>2</b> — центр і коло по торцю ручки. Підпис стоїть там, де ручка <code>_Label</code>.</div></div>
+<div class="shot"><div class="im"><img src="img/measure-04-diameter-leader.jpg" alt="Leader"></div><div class="cap">Те саме зблизька: підпис винесено на ручку <code>_Label</code>, лінія закінчується стрілкою на колі.</div></div>
+<div class="note">Діаметр піднімається по нормалі над сусідніми виступами автоматично (промені від кола до ~3 радіусів, запас 0.5 мм), тож підпис не ховається за корпусом. Повідомлення після створення показує, на скільки мм його піднято.</div>
 <div class="unv">Angle from Selection і Outer (Edit Mode) не запускалися. Ruler/Dimension із Asset Browser теж не тестувалися. Add Handles для вже створеного Angle — спрацьовує автоматично при Add Angle.</div>
 
 <h3 id="section">HUD Section</h3>
@@ -350,7 +352,7 @@ td:first-child{white-space:nowrap}
 <h3 id="fui">HUD FUI</h3>
 <div class="what"><b class="t">Що це</b>Декоративні елементи інтерфейсу: шкала з рисками, кутові дужки, лічильник, бари/слайдери.</div>
 <div class="split">
-<div class="shot"><div class="im"><img src="img/fui-02-panel.png" alt="Панель FUI"></div><div class="cap">HUD FUI: Preview All, чотири типи, Face Camera.</div></div>
+<div class="shot"><div class="im"><img src="img/fui-02-panel.png" alt="Панель FUI"></div><div class="cap">HUD FUI: Preview All, чотири типи, Face Camera і блок Timing зі Stagger.</div></div>
 <div>
 <table><tr><th>Кнопка</th><th>Що робить</th></tr>
 <tr><td>Tick Scale</td><td>Шкала з рисками і числами та покажчиком (дуга/лінія).</td></tr>
@@ -358,34 +360,53 @@ td:first-child{white-space:nowrap}
 <tr><td>Counter</td><td>Лічильник чисел з Prefix / Suffix, режимом, кількістю цифр.</td></tr>
 <tr><td>Bars / Sliders</td><td>Bar, Segments, Equalizer, Slider.</td></tr>
 <tr><td>Preview All: On / Off</td><td>Показати всі HUD-елементи повністю (Preview Full) або повернути анімацію.</td></tr>
+<tr><td>Timing: Static / Animated / Keyed</td><td>Режим появи для всіх HUD-елементів сцени, див. розділ «HUD Timing» нижче.</td></tr>
 <tr><td>Face Camera / ✕</td><td>Constraint Copy Rotation до камери сцени на виділених; ✕ — прибрати.</td></tr></table></div></div>
 <div class="shot"><div class="im"><img src="img/fui-01-all.jpg" alt="Усі FUI">
-<span class="mk" style="left:20%;top:55%">1</span><span class="mk" style="left:36%;top:37%">2</span><span class="mk" style="left:82%;top:41%">3</span><span class="mk" style="left:79%;top:69%">4</span></div>
+<span class="mk" style="left:38%;top:78%">1</span><span class="mk" style="left:24%;top:20%">2</span><span class="mk" style="left:72%;top:26%">3</span><span class="mk" style="left:78%;top:44%">4</span></div>
 <div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Усі чотири елементи, Preview All On + Face Camera. <b>1</b> — Tick Scale (0–100), <b>2</b> — Brackets, <b>3</b> — Counter (100%), <b>4</b> — Bars (сегменти).</div></div>
-<div class="warn">Brackets ставляться в точку півоту виділеного обʼєкта, а не в його центр габариту. Якщо півот знизу (як у тесті, на землі) — дужки виходять нижче моделі; підніми <code>Brackets</code> по Z або постав півот у центр. Розмір дужок береться з обʼєкта + <b>Fit Margin</b>.</div>
-<div class="note">Типовий розмір Tick Scale / Counter / Bars невеликий (десятки мм). У метровій сцені їх треба масштабувати (у тесті ×2.2 / ×5 / ×3) або піднімати параметри в модифікаторі.</div>
+<div class="note">Brackets ставляться в центр габариту виділеного обʼєкта (а не в його півот). Розмір дужок береться з обʼєкта + <b>Fit Margin</b>.</div>
+<div class="note">Типовий розмір Tick Scale / Counter / Bars невеликий (десятки мм). У метровій сцені (Unit Scale ≥ 0.5) вони створюються зі стартовим масштабом ×2.2 / ×5 / ×3; далі підлаштуй масштаб обʼєкта або параметри в модифікаторі.</div>
 <div class="unv">Не перевірено: Brackets Style «рамка», Show Fill / Center Marks, режими Counter (From/To/Value), типи Bars (Equalizer, Slider).</div>
+<h3 id="timing">HUD Timing: Static / Animated / Keyed</h3>
+<div class="what"><b class="t">Що це</b>Кожен HUD-елемент (Diameter, Angle, Callout, Tick Scale, Brackets, Counter, Bars) має режим <b>Timing</b> і слайдер <b>Animation</b>. Нові елементи зʼявляються <b>Static</b>: повністю видимі, поки ти їх налаштовуєш. Коли все готово, вмикаєш анімований режим.</div>
+<table><tr><th>Режим</th><th>Що робить</th></tr>
+<tr><td>Static</td><td>Елемент повністю зʼявився (кадр = Start Frame + Duration). Для налаштування й статичних кадрів.</td></tr>
+<tr><td>Animated</td><td>Як раніше: поява за <b>Start Frame</b> і <b>Duration</b>, зникання за <b>Use Out</b> / <b>Out Frame</b> / <b>Out Duration</b>.</td></tr>
+<tr><td>Keyed</td><td>Кадр береться зі слайдера <b>Animation</b> (0–2): <b>0 → 1</b> — поява, <b>1 → 2</b> — зникання (потрібен Use Out). Ставиш ключі на Animation, як на Anim Progress у GN_Curve_Seq_Anim.</td></tr></table>
+<ol class="steps">
+<li>У панелі HUD Callout / Measure / FUI знайди блок <b>Timing</b>: кнопки <b>Static / Animated / Keyed</b> перемикають усі HUD-елементи сцени.</li>
+<li>Для окремого елемента: у тому ж блоці зʼявляються <b>Timing</b> і <b>Animation</b> його модифікаторів (Callout має кілька: Ring, Label).</li>
+<li><b>Порядок появи і зникання</b>: виділи кілька елементів → <b>Stagger</b>. Start Frame і Out Frame зсуваються за порядком імен; Step In / Step Out — крок у кадрах, Reverse Appear / Reverse Disappear — зворотний порядок.</li></ol>
+<div class="note">Режим додається автоматично до груп бібліотеки при створенні елемента (файли бібліотеки не змінюються). Старі елементи в сценах отримують Timing = Animated, поведінка не змінюється. Підміняється лише кадр сцени; обертання й пульсація (за секундами) йдуть у реальному часі.</div>
+<div class="warn">Callout у Keyed доходить до повної появи трохи раніше A = 1: у підпису немає власного Duration, береться Leader Duration + 60 кадрів.</div>
+<div class="shot"><div class="im"><img src="img/timing-02-keyed-props.png" alt="Keyed Animation у Properties"></div><div class="cap">Properties → Modifiers: <b>Timing = Keyed</b>, поле <b>Animation</b> жовте (є ключі). Ключі: 0 на кадрі 1, 1 на кадрі 30 (повна поява), 1 на кадрі 60, 2 на кадрі 90 (зниклий).</div></div>
+<div class="shot"><div class="im"><img src="img/timing-03-keyed-strip.jpg" alt="Keyed, кадри"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Keyed: Counter, Bars і Diameter ведуться одним Animation. Кадр 1 — порожньо, 16 — поява на півшляху, 30 — повністю, 75 — зникання, 90 — зникли.</div></div>
+<div class="shot"><div class="im"><img src="img/timing-04-stagger-strip.jpg" alt="Stagger"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Stagger, крок 8 кадрів: Start 1 / 9 / 17 / 25, Out 60 / 68 / 76 / 84. Елементи зʼявляються по черзі; кадр 80 показує порядок зникання.</div></div>
+<div class="unv">Перевірено кількістю вершин на Diameter, Angle, Counter і Callout у Static / Animated / Keyed. HUD Section, Volume Cut і лінійки режиму не мають. Keyed і Stagger перевірено на рендері (кадри вище).</div>
+
 <h2 id="tools">5. Production Tools</h2>
 <div class="split">
 <div class="shot"><div class="im"><img src="img/tools-01-panel.png" alt="Production Tools"></div><div class="cap">Панель: Proximity Alpha, Gradient Mask, Rigging (див. розділ 2), Scene Utilities. Іконка «?» у заголовку — цей гайд.</div></div>
 <div class="what"><b class="t">Що це</b>Дрібні утиліти для сцен: прозорість за відстанню до обʼєкта, анімована градієнтна маска і дві утиліти для підготовки сцени.</div></div>
+<div class="warn">Ці інструменти змінюють матеріали, світла, композитор і Output сцени. Користуйся ними бажано в <b>окремому .blend або окремій сцені</b> (копія), а не у фінальному робочому файлі.</div>
 
 <h3 id="prox">Proximity Alpha</h3>
 <div class="what"><b class="t">Що це</b>Деталь стає прозорою поблизу вибраного обʼєкта (або, навпаки, з відстанню): GN-модифікатор пише відстань в атрибут <code>mask_dist</code>, шейдер-група <code>M_Proximity_Alpha</code> перетворює її в Alpha матеріалу.</div>
 <ol class="steps">
 <li>Виділи меш(і) → <b>Apply Proximity Alpha Setup</b>. Додається модифікатор <code>GN_Proximity_Mask</code> і група в матеріалах (її вихід вмикається у Alpha Principled).</li>
-<li>У модифікаторі в полі <b>Object</b> вкажи обʼєкт, до якого міряється відстань (ручка, емпті).</li>
-<li>Підлаштуй Color Ramp усередині групи <code>M_Proximity_Alpha</code> (Edit group, Tab).</li></ol>
+<li>Контролер <code>Proximity_Controller</code> (меш-ікосфера, бо Geometry Proximity не бачить Empty) створюється сам; рухай його або вкажи свій обʼєкт у полі <b>Object</b> модифікатора.</li>
+<li>Зона прозорості задається у модифікаторі полями <b>Falloff Start</b> і <b>Falloff End</b> в одиницях сцени (стартові значення — частка габариту виділеного); Color Ramp у групі <code>M_Proximity_Alpha</code> чіпати не треба.</li></ol>
 <div class="shot"><div class="im"><img src="img/prox-01.jpg" alt="Proximity Alpha"><span class="mk" style="left:60%;top:82%">1</span></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Корпус розчиняється навколо ручки (<b>1</b>) — шум додає зернистість краю. Ramp виставлений 0.04 → 0.30 (одиниць сцени).</div></div>
-<div class="bug">Типові межі Color Ramp — 0.51 і 0.895 одиниць сцени. У метровій сцені все ближче 0.5 м до обʼєкта стає <b>повністю</b> прозорим (на першому рендері тест-корпус зник цілком). Підганяй позиції ramp під розмір сцени.</div>
-<div class="bug">Кнопки «прибрати» немає: видаляй модифікатор <code>GN_Proximity_Mask</code> і вузол-групу в матеріалі вручну. Матеріал має Blend = Dithered — зернистість видна на низьких семплах.</div>
+<div class="note">Раніше межі Color Ramp були зашиті (0.51 і 0.895), і в метровій сцені корпус міг зникнути цілком. Тепер Falloff Start/End перемапують відстань на ці пороги.</div>
+<div class="note">Кнопка <b>🗑 Remove</b> прибирає налаштування з виділених. Матеріал має Blend = Dithered — зернистість видна на низьких семплах.</div>
 
 <h3 id="grad">Gradient Mask</h3>
 <div class="what"><b class="t">Що це</b>Анімована градієнтна маска за положенням Empty. У <b>Line Mode</b> рендер перетворюється на «лінійну» подачу: видима лише смуга моделі на межі градієнта (альфа через композитор), світло вимкнене, фон світу 0. <b>Surface Mode</b> — звичайний рендер.</div>
 <ol class="steps">
 <li><b>Create New Tool</b> — копія групи <code>LineSurface switcher</code> і Empty <code>Gradient_Direction</code> (незалежний ефект; для другого ефекту кнопку тисни ще раз).</li>
 <li>Виділи меші → <b>Load &amp; Apply Gradient Mask</b>. Матеріали копіюються (<code>.001</code>) і отримують вузол маски; параметри зʼявляються на Empty як custom properties (<b>Line Border Size</b>, <b>Border Noise</b>) і дублюються в панелі.</li>
-<li>Натисни <b>Surface Mode</b> або <b>Line Mode</b>: тільки це підключає композитор. Без цього рендер після Apply виходить чорним.</li>
+<li>Load &amp; Apply сам підключає Render Layers до виходу композитора (рендер не буде чорним). <b>Surface Mode</b> / <b>Line Mode</b> перемикають подачу; Line Mode перед запуском питає підтвердження.</li>
 <li>Рухай <code>Gradient_Direction</code> (позиція / поворот / масштаб) — по ньому проходить смуга. Анімуй Empty ключами.</li>
 <li><b>🗑 Remove Mask</b> — прибирає маску з виділених (повертає Surface Mode).</li></ol>
 <div class="row">
@@ -394,7 +415,7 @@ td:first-child{white-space:nowrap}
 <div class="shot"><div class="im"><img src="img/grad-02-line-b.jpg" alt="Line, Z=0.25"></div><div class="cap"><span class="tag t-act">Line · Z 0.25</span>Смуга піднялась разом з Empty (ширина — Line Border Size 0.04).</div></div>
 <div class="shot"><div class="im"><img src="img/grad-02-line-c.jpg" alt="Line, Z=0.45"></div><div class="cap"><span class="tag t-res">Line · Z 0.45</span>Empty на верхній грані — смуга майже зникла.</div></div>
 </div>
-<div class="warn">У Line Mode рендер — прозорий RGBA без світла; на зображеннях вище для наочності він накладений на темний фон. Композитор перемикається під сцену: у сцені, де вже є свій Compositor, Line/Surface Mode переписує звʼязки Group Output.</div>
+<div class="warn">У Line Mode рендер — прозорий RGBA без світла; на зображеннях вище для наочності він накладений на темний фон. Перед входом у Line Mode зберігаються звʼязки виходів композитора і видимість світел, Surface Mode повертає їх назад.</div>
 <div class="unv">Не знімав: поворот і масштаб Empty (лише позиція), Border Noise, анімацію через ключі.</div>
 
 <h3 id="util">Scene Utilities</h3>
@@ -429,17 +450,16 @@ td:first-child{white-space:nowrap}
 
 <h2 id="faq">7. Типові проблеми</h2>
 <table><tr><th>Симптом</th><th>Причина і що робити</th></tr>
-<tr><td>HUD-елемент зʼявився, але порожній</td><td>Кадр = Start Frame. Перейди на кадр після нього або ввімкни Preview Full / Preview All.</td></tr>
+<tr><td>HUD-елемент зʼявився, але порожній</td><td>Нові елементи створюються зі Static і мають бути видимими. Якщо елемент у режимі Animated, кадр = Start Frame: перейди на кадр після нього або ввімкни Static / Preview All.</td></tr>
 <tr><td>Підпис дзеркальний</td><td>Увімкни Face Camera (або Mirror Text X/Y/Z).</td></tr>
 <tr><td>Текст виходить за межі і обрізається</td><td>Сусідня поверхня ближче до камери за площину HUD (Measure Diameter). Підніми обʼєкт по нормалі.</td></tr>
-<tr><td>Підпис Angle показує не те, що в панелі</td><td>Значення Angle у панелі — стартове; кут задають ручки A/B.</td></tr>
-<tr><td>Рендер чорний після Load &amp; Apply Gradient Mask</td><td>Не натиснуто Surface/Line Mode — композитор не підключений.</td></tr>
-<tr><td>Proximity Alpha: усе прозоре / нічого не видно</td><td>Не вказано Object у модифікаторі або Color Ramp не під масштаб сцени.</td></tr>
-<tr><td>Brackets «втекли» під модель</td><td>Півот обʼєкта не в центрі: підніми Brackets по Z.</td></tr>
+<tr><td>Підпис Angle показує не те, що в панелі</td><td>Значення Angle у панелі — стартове; кут задають ручки A/B (він показаний рядком «Кут з ручок A/B»).</td></tr>
+<tr><td>Ручка Label діаметра не рухає підпис</td><td>Стиль Across / Text Center лише повертає лінію. Постав стиль Leader (Add Handles робить це сам).</td></tr>
+<tr><td>Рендер чорний після Gradient Mask</td><td>Натисни Surface Mode (повертає звичайну подачу); Load &amp; Apply тепер підключає композитор сам.</td></tr>
+<tr><td>Proximity Alpha: усе прозоре / нічого не видно</td><td>Підлаштуй Falloff Start / End у модифікаторі під розмір сцени.</td></tr>
 <tr><td>Кнопки Add HUD пишуть «Не знайдено бібліотеку»</td><td>Перевір <b>HUD Library</b> у Preferences аддона.</td></tr>
 <tr><td>STEP Pipeline: «Звіт» падає (KeyError Lmax_mm)</td><td>Стара версія аддона. Постав версію з репозиторію.</td></tr>
-<tr><td>Нова арматура називається Armature.001</td><td>У файлі вже є Armature. Перейменуй старий обʼєкт.</td></tr>
-<tr><td>Символ «·» не відображається в Callout</td><td>Глиф відсутній у шрифті HUD; використовуй «-» або свій шрифт у HUD Style → Font.</td></tr>
+<tr><td>Символ «·» не відображається в підписі</td><td>У Bfont Regular і Artifakt Element Thin він є; перевір, який шрифт стоїть у HUD Style → Font.</td></tr>
 <tr><td>Кнопка Run не працює / скрипт не знайдено</td><td>STEP Pipeline очікує <code>…\AssetsLibrary\EXM_Pipeline</code> і аддон CADder; без них панель порожня.</td></tr></table>
 
 <h2 id="unv">Що не вдалося перевірити</h2>
@@ -452,7 +472,7 @@ td:first-child{white-space:nowrap}
 <li>HUD FUI: режими Counter, типи Bars, Brackets Frame, Show Fill.</li>
 <li>Render Passes: Render Frame N, повний прохід двох пасів, Esc.</li></ul>
 
-<p style="margin-top:40px;color:var(--mute)">Rost Production Tools 4.0 · Blender 5.2 · гайд зібраний на тестовій сцені 16.11.2026.</p>
+<p style="margin-top:40px;color:var(--mute)">Rost Production Tools 4.1 · Blender 5.2 · гайд зібраний на тестовій сцені 16.11.2026, оновлений того ж вечора після виправлень.</p>
 </main>
 </div>
 <script>

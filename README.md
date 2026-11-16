@@ -1,4 +1,4 @@
-# Rost Production Tools 4.0
+# Rost Production Tools 4.1
 
 Blender 5.2 add-on: STEP pipeline, CAD Auto-Rig, Rost Light Rig, HUD graphics (Callout, Measure, Section, Volume Cut, Style, FUI), Proximity Alpha, Gradient Mask, scene utilities. All panels live in the N-panel tab **Rost Tools**.
 

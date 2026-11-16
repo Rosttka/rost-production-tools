@@ -1,13 +1,23 @@
 bl_info = {
-    "name": "Rost Production Tools 4.0",
+    "name": "Rost Production Tools 4.1",
     "author": "Rost",
-    "version": (4, 0),
+    "version": (4, 1),
     "blender": (5, 0, 0),
     "location": "View3D > Sidebar > Rost Tools",
     "description": "HUD Callout (Add, Cutout, Presets), Proximity Alpha, Gradient Mask (multi-instance), CAD Auto-Rig, Material cleanup, Delta transforms, Rost Light Rig, STEP Pipeline",
     "category": "Object",
 }
 
+# v4.1b: HUD Timing — Static / Animated / Keyed на кожному HUD-елементі (Diameter, Angle, Callout, FUI):
+#       нові інструменти зʼявляються Static; слайдер Animation (0→1 поява, 1→2 зникання) для ключів;
+#       кнопки Timing у панелях HUD, Stagger виділених = порядок появи / зникання.
+# v4.1: CAD Auto-Rig (UE): object parenting (Parent Type = Bone) замість vertex groups + Armature
+#       modifier (режим Vertex groups лишився для експорту в UE), RigRoot за габаритом моделі,
+#       захист імені Armature, опція «Мін/Макс у см». Gradient Mask: композитор підключається сам,
+#       Line Mode зберігає / повертає світла й виходи композитора, підтвердження. Proximity Alpha:
+#       контролер-меш створюється сам, Falloff Start/End в одиницях сцени, кнопка Remove.
+#       HUD Measure: ручка Label діаметра → стиль Leader (підпис стає в ручку); Diameter піднімається над сусідніми виступами, Angle показує кут з ручок A/B.
+#       HUD FUI: Brackets у центрі габариту, стартовий масштаб Tick/Counter/Bars.
 # v4.0: Rost Light Rig і STEP Pipeline (колишній EXM Pipeline Panel) — в одному аддоні.
 #       STEP Pipeline — імпорт / матеріали / риг / перетесселяція; шаблон ролика прибрано.
 #
@@ -263,27 +273,87 @@ def setup_compositor(scene):
     return tree
 
 
+def ensure_comp_output(scene):
+    """Render Layers -> порожні виходи композитора (інакше рендер чорний). Чужі зв'язки не чіпає."""
+    tree = get_compositor_tree(scene, create=False)
+    if not tree:
+        return
+    rl = next((n for n in tree.nodes if n.type == 'R_LAYERS'), None)
+    if not rl:
+        return
+    for sock in _compositor_output_sockets(tree):
+        if not sock.is_linked:
+            tree.links.new(rl.outputs[0], sock)
+
+
+def _comp_save_outputs(scene, tree):
+    """Запам'ятовує, що було підключено до виходів композитора, перед Line Mode."""
+    if "fx_comp_saved" in scene:
+        return
+    saved = []
+    for n in tree.nodes:
+        for sock in n.inputs:
+            if sock in _compositor_output_sockets(tree):
+                src = sock.links[0] if sock.is_linked else None
+                saved.append({"node": n.name, "sock": sock.name,
+                              "from_node": src.from_node.name if src else "",
+                              "from_sock": src.from_socket.name if src else ""})
+    scene["fx_comp_saved"] = json.dumps(saved)
+
+
+def _comp_restore_outputs(scene, tree):
+    raw = scene.get("fx_comp_saved")
+    if not raw:
+        return
+    try:
+        for e in json.loads(raw):
+            n = tree.nodes.get(e["node"])
+            fn = tree.nodes.get(e["from_node"]) if e["from_node"] else None
+            if n and fn:
+                dst = n.inputs.get(e["sock"])
+                src = fn.outputs.get(e["from_sock"])
+                if dst and src:
+                    tree.links.new(src, dst)
+    except Exception as ex:
+        print(f"Gradient Mask: не вдалося відновити композитор: {ex}")
+    del scene["fx_comp_saved"]
+
+
 def apply_scene_mode(scene, is_line):
-    """Сценна частина Line/Surface Mode: композитор, світло, фон світу."""
+    """Сценна частина Line/Surface Mode: композитор, світло, фон світу.
+    Те, що було до Line Mode (зв'язки композитора, видимість світел), зберігається й
+    повертається в Surface Mode."""
     tree = get_compositor_tree(scene, create=False)
     if tree:
         setup_compositor(scene)
-        nodes = tree.nodes
         links = tree.links
-
         if is_line:
-            comp_src = next((n for n in nodes if n.name == "Set Alpha" or n.label == "Set Alpha"), None)
+            _comp_save_outputs(scene, tree)
+            comp_src = next((n for n in tree.nodes if n.name == "Set Alpha" or n.label == "Set Alpha"), None)
+            if comp_src:
+                for sock in _compositor_output_sockets(tree):
+                    links.new(comp_src.outputs[0], sock)
         else:
-            comp_src = next((n for n in nodes if n.type == 'R_LAYERS'), None)
+            if "fx_comp_saved" in scene:
+                _comp_restore_outputs(scene, tree)
+            ensure_comp_output(scene)
 
-        if comp_src:
-            for sock in _compositor_output_sockets(tree):
-                links.new(comp_src.outputs[0], sock)
-
-    for o in scene.objects:
-        if o.type == 'LIGHT':
-            o.hide_render = is_line
-            o.hide_viewport = is_line
+    if is_line:
+        if "fx_saved_lights" not in scene:
+            scene["fx_saved_lights"] = json.dumps(
+                {o.name: [o.hide_render, o.hide_viewport] for o in scene.objects if o.type == 'LIGHT'})
+        for o in scene.objects:
+            if o.type == 'LIGHT':
+                o.hide_render = True
+                o.hide_viewport = True
+    else:
+        raw = scene.get("fx_saved_lights")
+        if raw:
+            saved = json.loads(raw)
+            for o in scene.objects:
+                if o.type == 'LIGHT' and o.name in saved:
+                    o.hide_render, o.hide_viewport = saved[o.name]
+            del scene["fx_saved_lights"]
 
     if _uses_nodes(scene.world):
         bg = next((n for n in scene.world.node_tree.nodes if n.type == 'BACKGROUND'), None)
@@ -296,6 +366,7 @@ def apply_scene_mode(scene, is_line):
             else:
                 if scene.fx_bg_saved:
                     bg.inputs[1].default_value = scene.fx_original_bg_strength
+                    scene.fx_bg_saved = False
 
 
 # ==============================================================================
@@ -461,12 +532,22 @@ class FX_OT_ApplyMask(bpy.types.Operator):
         context.view_layer.update()
 
         setup_compositor(context.scene)
+        ensure_comp_output(context.scene)      # без цього рендер чорний
         return {'FINISHED'}
 
 class FX_OT_SwitchMode(bpy.types.Operator):
     bl_idname = "fx.switch_mode"
     bl_label = "Switch Mode"
     mode: bpy.props.StringProperty()
+
+    def invoke(self, context, event):
+        if self.mode == 'LINE':
+            return context.window_manager.invoke_confirm(
+                self, event, title="Line Mode змінює всю сцену",
+                message="Вимкне ВСІ світла, обнулить фон світу й перепідключить вихід композитора. "
+                        "Surface Mode поверне збережене. Краще робити в окремому файлі / сцені.",
+                confirm_text="Увімкнути Line Mode")
+        return self.execute(context)
 
     def execute(self, context):
         is_line = (self.mode == 'LINE')
@@ -621,9 +702,86 @@ class FX_OT_RemoveMask(bpy.types.Operator):
 # ==============================================================================
 # ОПЕРАТОРИ ІЗ ROST PRODUCTION TOOLS
 # ==============================================================================
+PROX_CTRL_NAME = "Proximity_Controller"
+PROX_RAMP_A, PROX_RAMP_B = 0.5091, 0.8955      # пороги Color Ramp у бібліотечному шейдері
+
+
+def _prox_sock_id(tree, name):
+    for it in tree.interface.items_tree:
+        if it.item_type == 'SOCKET' and it.in_out == 'INPUT' and it.name == name:
+            return it.identifier
+    return None
+
+
+def _prox_patch_groups(gn_tree):
+    """Бібліотечна група міряє відстань в одиницях сцени, а пороги Color Ramp (0.51 / 0.895)
+    зашиті. У метровій сцені це 0.5 м повної прозорості. Додаємо входи Falloff Start / End (в
+    одиницях сцени) і Map Range, який перемапує відстань на ті самі пороги. Ідемпотентно."""
+    if gn_tree is None or _prox_sock_id(gn_tree, "Falloff Start"):
+        return
+    nodes, links = gn_tree.nodes, gn_tree.links
+    prox = next((n for n in nodes if n.type == 'PROXIMITY'), None)
+    store = next((n for n in nodes if n.type == 'STORE_NAMED_ATTRIBUTE'), None)
+    gin = next((n for n in nodes if n.type == 'GROUP_INPUT'), None)
+    if not (prox and store and gin):
+        return
+    for nm, dv in (("Falloff Start", 0.05), ("Falloff End", 0.15)):
+        sk = gn_tree.interface.new_socket(nm, in_out='INPUT', socket_type='NodeSocketFloat')
+        sk.default_value = dv
+        sk.min_value = 0.0
+        sk.subtype = 'DISTANCE'
+        sk.description = ("Відстань до контролера, де деталь ще повністю прозора" if nm.endswith("Start")
+                          else "Відстань, з якої деталь повністю непрозора")
+    mr = nodes.new('ShaderNodeMapRange')
+    mr.name = "Falloff Remap"
+    mr.clamp = True
+    mr.inputs["To Min"].default_value = PROX_RAMP_A
+    mr.inputs["To Max"].default_value = PROX_RAMP_B
+    mr.location = (store.location.x - 220, store.location.y - 120)
+    for l in list(store.inputs["Value"].links):
+        links.remove(l)
+    links.new(prox.outputs["Distance"], mr.inputs["Value"])
+    links.new(gin.outputs["Falloff Start"], mr.inputs["From Min"])
+    links.new(gin.outputs["Falloff End"], mr.inputs["From Max"])
+    links.new(mr.outputs["Result"], store.inputs["Value"])
+
+
+def _prox_selection_box(objs):
+    from mathutils import Vector
+    pts = [o.matrix_world @ Vector(c) for o in objs for c in o.bound_box]
+    lo = Vector((min(p[i] for p in pts) for i in range(3)))
+    hi = Vector((max(p[i] for p in pts) for i in range(3)))
+    return (lo + hi) / 2.0, max(hi - lo)
+
+
+def _prox_controller(context, objs):
+    """Контролер = МЕШ (Geometry Proximity міряє відстань до геометрії, Empty не підходить).
+    Існуючий Proximity_Controller / Mask_Controller* у сцені, інакше нова сфера в центрі виділення."""
+    for o in context.scene.objects:
+        if o.type == 'MESH' and o not in objs and (
+                o.name.startswith(PROX_CTRL_NAME) or o.name.startswith("Mask_Controller")):
+            return o, False
+    import bmesh
+    centre, size = _prox_selection_box(objs)
+    me = bpy.data.meshes.new(PROX_CTRL_NAME)
+    bm = bmesh.new()
+    bmesh.ops.create_icosphere(bm, subdivisions=2, radius=max(size * 0.1, 1e-4))
+    bm.to_mesh(me)
+    bm.free()
+    ctrl = bpy.data.objects.new(PROX_CTRL_NAME, me)
+    ctrl.display_type = 'WIRE'
+    ctrl.hide_render = True
+    ctrl.location = centre
+    context.scene.collection.objects.link(ctrl)
+    return ctrl, True
+
+
 class OBJECT_OT_ApplyProximitySetup(bpy.types.Operator):
     bl_idname = "object.apply_proximity_setup"
     bl_label = "Apply Proximity Alpha Setup"
+    bl_description = ("Деталі стають прозорими біля контролера. Контролер - меш "
+                      f"{PROX_CTRL_NAME} (створюється автоматично, рухай / масштабуй його). Пороги (Falloff) - в одиницях сцени, "
+                      "виставляються за габаритом виділеного")
     bl_options = {'REGISTER', 'UNDO'}
 
     def _append_node_group(self, blend_path, group_name):
@@ -652,12 +810,30 @@ class OBJECT_OT_ApplyProximitySetup(bpy.types.Operator):
             self.report({'WARNING'}, "Не виділено жодного меш-об'єкта")
             return {'CANCELLED'}
 
+        _prox_patch_groups(gn_tree)
+        ctrl, created = _prox_controller(context, selected_meshes)
+        _, size = _prox_selection_box(selected_meshes)
+        f_start, f_end = size * 0.15, size * 0.4
+
+        id_obj = _prox_sock_id(gn_tree, "Object") if gn_tree else None
+        id_a = _prox_sock_id(gn_tree, "Falloff Start") if gn_tree else None
+        id_b = _prox_sock_id(gn_tree, "Falloff End") if gn_tree else None
+
         for obj in selected_meshes:
             if gn_tree:
                 mod = next((m for m in obj.modifiers if m.type == 'NODES' and m.node_group == gn_tree), None)
-                if not mod:
+                is_new = mod is None
+                if is_new:
                     mod = obj.modifiers.new(name=GN_GROUP_NAME, type='NODES')
                     mod.node_group = gn_tree
+                if id_obj:
+                    _hud_set(mod, id_obj, ctrl)
+                if is_new:
+                    if id_a:
+                        _hud_set(mod, id_a, f_start)
+                    if id_b:
+                        _hud_set(mod, id_b, f_end)
+                obj.update_tag()
 
             if shader_group_tree:
                 for slot in obj.material_slots:
@@ -681,8 +857,45 @@ class OBJECT_OT_ApplyProximitySetup(bpy.types.Operator):
                             if alpha_in and alpha_out:
                                 links.new(alpha_out, alpha_in)
 
-        self.report({'INFO'}, f"Proximity Alpha налаштовано для {len(selected_meshes)} об'єктів")
+        self.report({'INFO'}, f"Proximity Alpha: {len(selected_meshes)} об'єктів, контролер {ctrl.name}"
+                              f"{' (створено)' if created else ''}, Falloff {f_start:.3g}…{f_end:.3g}")
         return {'FINISHED'}
+
+
+class OBJECT_OT_RemoveProximitySetup(bpy.types.Operator):
+    bl_idname = "object.remove_proximity_setup"
+    bl_label = "Remove Proximity Alpha"
+    bl_description = "Прибирає модифікатор GN_Proximity_Mask і нод M_Proximity_Alpha з виділених мешів, повертає Alpha в 1"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        n_obj = 0
+        for obj in context.selected_objects:
+            if obj.type != 'MESH':
+                continue
+            hit = False
+            for md in [m for m in obj.modifiers if m.type == 'NODES' and m.node_group
+                       and m.node_group.name.startswith(GN_GROUP_NAME)]:
+                obj.modifiers.remove(md)
+                hit = True
+            for slot in obj.material_slots:
+                mat = slot.material
+                if not _uses_nodes(mat):
+                    continue
+                for gn in [n for n in mat.node_tree.nodes if n.type == 'GROUP' and n.node_tree
+                           and n.node_tree.name.startswith(SHADER_GROUP_NAME)]:
+                    mat.node_tree.nodes.remove(gn)
+                    hit = True
+                    bsdf = next((n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED'), None)
+                    if bsdf and "Alpha" in bsdf.inputs and not bsdf.inputs["Alpha"].is_linked:
+                        bsdf.inputs["Alpha"].default_value = 1.0
+            n_obj += hit
+        if n_obj:
+            self.report({'INFO'}, f"Proximity Alpha прибрано з {n_obj} об'єктів (контролер лишено)")
+            return {'FINISHED'}
+        self.report({'WARNING'}, "Proximity Alpha на виділеному не знайдено")
+        return {'CANCELLED'}
+
 
 class OBJECT_OT_ClearVisibleMaterialSlots(bpy.types.Operator):
     bl_idname = "object.clear_visible_material_slots"
@@ -761,6 +974,27 @@ class CADRIG_Settings(bpy.types.PropertyGroup):
         name="Обертання",
         items=[('XYZ', "Euler XYZ", "Зручно в Graph Editor"), ('QUATERNION', "Quaternion", "")],
         default='XYZ')
+    skin_mode: bpy.props.EnumProperty(
+        name="Прив'язка деталей",
+        items=[('OBJECT', "Object parenting (швидко)",
+                "Меш стає дитиною кістки (Parent Type = Bone). Без vertex groups і Armature modifier: "
+                "вʼюпорт не гальмує. Для робочих .blend / Library Override"),
+               ('WEIGHTS', "Vertex groups (для експорту в UE)",
+                "Vertex group 1.0 + Armature modifier на кожен меш. Потрібно, щоб FBX імпортувався "
+                "в Unreal як Skeletal Mesh. Повільніше у вʼюпорті")],
+        default='OBJECT')
+    auto_units: bpy.props.BoolProperty(
+        name="Мін/Макс у см",
+        default=False,
+        description="Мін. і макс. довжина кістки задані в сантиметрах і перераховуються під одиниці сцени "
+                    "(сантиметрова сцена: як є; метрова: ×0.01). Вимкнено - значення в одиницях Blender. "
+                    "У метровій сцені постав мін/макс ~0.02/0.12 або ввімкни це й лиши 1.5/12")
+
+
+def _ar_bu_per_cm(scene):
+    """Скільки одиниць Blender в 1 см (сантиметрова сцена: 1.0, метрова: 0.01)."""
+    k = scene.unit_settings.scale_length * 100.0
+    return 1.0 / k if k > 1e-9 else 1.0
 
 
 def _ar_has_bone(obj):
@@ -847,12 +1081,14 @@ def _ar_bone_frame(obj, mw, s):
 
     if obj.type == 'EMPTY':
         # допоміжна кістка: довжина = видимий розмір пустушки
-        length = max(s.min_len, obj.empty_display_size * max(mw.to_scale()) * 1.5)
+        u0 = _ar_bu_per_cm(bpy.context.scene) if getattr(s, "auto_units", False) else 1.0
+        length = max(s.min_len * u0, obj.empty_display_size * max(mw.to_scale()) * 1.5)
     elif radius is None:
         length = max(d) * s.len_factor
     else:
         length = d[axis]
-    length = min(s.max_len, max(s.min_len, length))
+    u = _ar_bu_per_cm(bpy.context.scene) if getattr(s, "auto_units", False) else 1.0
+    length = min(s.max_len * u, max(s.min_len * u, length))
     return m, length, radius
 
 
@@ -885,8 +1121,27 @@ def cad_autorig_run(context, s):
         if o.data.users > 1:
             o.data = o.data.copy()
 
-    # 3. Позиції спокою
+    # 3. Позиції спокою. Деталі в Object-parenting їдуть за кістками, тому перед
+    #    зчитуванням скидаємо позу (анімація - екшени - лишається)
+    old_rig = bpy.data.objects.get(AR_RIG_NAME)
+    if old_rig is not None and old_rig.type == 'ARMATURE' and old_rig.pose:
+        from mathutils import Quaternion, Vector
+        for pb in old_rig.pose.bones:
+            pb.location = Vector((0, 0, 0))
+            pb.rotation_quaternion = Quaternion((1, 0, 0, 0))
+            pb.rotation_euler = (0, 0, 0)
+            pb.scale = Vector((1, 1, 1))
+        ctx.view_layer.update()
     mws = {o.name: o.matrix_world.copy() for o in objs}
+    u_cm = _ar_bu_per_cm(scene) if getattr(s, "auto_units", False) else 1.0
+    model_size = 0.0
+    for o in meshes:
+        model_size = max(model_size, max(o.dimensions))
+    # ... габарит всієї моделі (по світових вершинах bbox)
+    from mathutils import Vector as _V
+    _pts = [mws[o.name] @ _V(c) for o in meshes for c in o.bound_box]
+    if _pts:
+        model_size = max(max(p[k] for p in _pts) - min(p[k] for p in _pts) for k in range(3))
 
     by_name = {o.name: o for o in objs}
     boned = [o for o in objs if _ar_has_bone(o)]
@@ -904,7 +1159,17 @@ def cad_autorig_run(context, s):
 
     # 4. Арматура
     rig = bpy.data.objects.get(AR_RIG_NAME)
+    if rig is not None and (rig.type != 'ARMATURE' or scene not in rig.users_scene):
+        # Ім'я "Armature" - контракт з UE: звільняємо його, а не отримуємо "Armature.001"
+        tag = scene.name if rig.type == 'ARMATURE' and rig.users_scene else "old"
+        if rig.type == 'ARMATURE' and rig.data.name == AR_RIG_NAME:
+            rig.data.name = f"{AR_RIG_NAME}_{tag}"
+        rig.name = f"{AR_RIG_NAME}_{tag}"
+        rig = None
     if rig is None:
+        old_data = bpy.data.armatures.get(AR_RIG_NAME)
+        if old_data is not None:
+            old_data.name = f"{AR_RIG_NAME}_data_old"
         arm = bpy.data.armatures.new(AR_RIG_NAME)
         rig = bpy.data.objects.new(AR_RIG_NAME, arm)
         scene.collection.objects.link(rig)
@@ -924,9 +1189,11 @@ def cad_autorig_run(context, s):
     for b in list(eb):
         eb.remove(b)
 
+    weights = getattr(s, "skin_mode", "OBJECT") == 'WEIGHTS'
     root = eb.new(AR_ROOT_NAME)
     root.head = (0, 0, 0)
-    root.tail = (0, 0, 10)
+    # довжина за габаритом моделі, а не фіксовані 10 одиниць (у метровій сцені це був "будинок")
+    root.tail = (0, 0, max(model_size * 0.25, 1e-4) if model_size > 0 else 10 * u_cm)
     root.use_deform = False
     root_name = root.name
 
@@ -939,7 +1206,7 @@ def cad_autorig_run(context, s):
         b.tail = (0, 1, 0)
         b.matrix = m
         b.length = length
-        b.use_deform = (o.type == 'MESH')
+        b.use_deform = weights and (o.type == 'MESH')
         bone_name[o.name] = b.name
         radius_of[o.name] = radius
 
@@ -950,7 +1217,7 @@ def cad_autorig_run(context, s):
         b.use_connect = False
 
     # Деталь без кістки і без батька з кісткою -> їде з Root
-    if any(not _ar_has_bone(o) and not owner(o[AR_PROP]) for o in meshes):
+    if weights and any(not _ar_has_bone(o) and not owner(o[AR_PROP]) for o in meshes):
         root.use_deform = True
 
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -969,34 +1236,47 @@ def cad_autorig_run(context, s):
         elif r is not None:
             pb.custom_shape = wgt
             pb.use_custom_shape_bone_size = True
-            sc = max(r * 1.15, s.min_len * 0.5) / bone.length
+            sc = max(r * 1.15, s.min_len * u_cm * 0.5) / bone.length
             pb.custom_shape_scale_xyz = (sc, sc, sc)
             if hasattr(bone, "color"):
                 bone.color.palette = AR_RING_COLOR
         else:
             pb.custom_shape = None
 
-    # 6. Вертексні групи + модифікатор
+    # 6. Привʼязка деталей до кісток
+    part_bone = {}
     for o in meshes:
         if _ar_has_bone(o):
-            bn = bone_name[o.name]
+            part_bone[o.name] = bone_name[o.name]
         else:
             t = owner(o[AR_PROP])
-            bn = bone_name[t] if t else root_name
-        o.vertex_groups.clear()
-        vg = o.vertex_groups.new(name=bn)
-        n = len(o.data.vertices)
-        if n:
-            vg.add(list(range(n)), 1.0, 'REPLACE')
+            part_bone[o.name] = bone_name[t] if t else root_name
+
+    # прибираємо слід попереднього режиму (старі vertex groups + Armature modifier)
+    for o in meshes:
         for md in [md for md in o.modifiers if md.type == 'ARMATURE']:
             o.modifiers.remove(md)
-        md = o.modifiers.new(AR_RIG_NAME, 'ARMATURE')
-        md.object = rig
+        o.vertex_groups.clear()
+
+    if weights:
+        for o in meshes:
+            vg = o.vertex_groups.new(name=part_bone[o.name])
+            n = len(o.data.vertices)
+            if n:
+                vg.add(list(range(n)), 1.0, 'REPLACE')
+            md = o.modifiers.new(AR_RIG_NAME, 'ARMATURE')
+            md.object = rig
 
     # 7. Перепарентування під арматуру без зсуву
     for o in objs:
         o.parent = rig
-        o.parent_type = 'OBJECT'
+        if not weights and o.type == 'MESH':
+            # Bone parent + relative: у спокої деталь не зсувається, довжина кістки не впливає
+            rig.data.bones[part_bone[o.name]].use_relative_parent = True
+            o.parent_type = 'BONE'
+            o.parent_bone = part_bone[o.name]
+        else:
+            o.parent_type = 'OBJECT'
         o.matrix_parent_inverse = rig.matrix_world.inverted()
     for o in objs:
         o.matrix_world = mws[o.name]
@@ -1019,8 +1299,9 @@ def cad_autorig_run(context, s):
 
 class OBJECT_OT_CadAutoRig(bpy.types.Operator):
     bl_idname = "object.cad_autorig"
-    bl_label = "CAD Auto-Rig"
+    bl_label = "CAD Auto-Rig (UE)"
     bl_description = ("Кістка на кожен виділений меш у його півоті, ієрархія = ієрархія об'єктів. "
+                      "Імена Armature / RigRoot / B_ - контракт з Unreal Engine. "
                       "Повторний запуск безпечний: меші, що вже в ригу, підхоплюються самі")
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -1055,10 +1336,18 @@ class OBJECT_PT_RossToolsPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
+        warn = layout.box()
+        col = warn.column(align=True)
+        col.label(text="Proximity Alpha / Gradient Mask міняють", icon='ERROR')
+        col.label(text="матеріали, світла й композитор сцени.")
+        col.label(text="Працюй у ОКРЕМОМУ .blend або сцені.")
+
         # Блок Proximity Alpha
         box = layout.box()
         box.label(text="Proximity Alpha", icon='MOD_MASK')
-        box.operator("object.apply_proximity_setup", icon='NODETREE')
+        row = box.row(align=True)
+        row.operator("object.apply_proximity_setup", icon='NODETREE')
+        row.operator("object.remove_proximity_setup", text="", icon='TRASH')
 
         # Блок Gradient Mask
         box = layout.box()
@@ -1107,7 +1396,7 @@ class OBJECT_PT_RossToolsPanel(bpy.types.Panel):
 
         # Блок Rigging
         box = layout.box()
-        box.label(text="Rigging", icon='ARMATURE_DATA')
+        box.label(text="Rigging · CAD Auto-Rig (UE)", icon='ARMATURE_DATA')
         box.operator("object.cad_autorig", icon='BONE_DATA')
         s = context.scene.cadrig_settings
         box.prop(s, "show_settings", emboss=False,
@@ -1124,6 +1413,8 @@ class OBJECT_PT_RossToolsPanel(bpy.types.Panel):
             row.prop(s, "min_len", text="Мін")
             row.prop(s, "max_len", text="Макс")
             col.prop(s, "rot_mode", text="")
+            col.prop(s, "auto_units")
+            col.prop(s, "skin_mode", text="")
 
         # Блок оптимізації та сцени
         box = layout.box()
@@ -1200,6 +1491,12 @@ def _hud_set(md, ident, v):
     try:
         s.value = v
     except Exception as e:
+        if isinstance(v, float):                # цілі сокети (кадри) приймають лише int
+            try:
+                s.value = int(round(v))
+                return
+            except Exception:
+                pass
         print("[HUD] не вдалося записати", md.name, ident, e)
 
 
@@ -1724,6 +2021,7 @@ class HUD_OT_add_callout(bpy.types.Operator):
         new.select_set(True)
         context.view_layer.objects.active = new
         context.scene.hud_callout = new
+        hud_timing_new([new])
         if context.scene.camera is None:
             self.report({'WARNING'}, f"{new.name} додано. У сцені немає камери — Align to Camera без цілі")
         else:
@@ -2051,6 +2349,7 @@ class OBJECT_PT_RossHUDPanel(bpy.types.Panel):
         r.prop(sc, "hud_keep_start", toggle=True)
         r.prop(sc, "hud_keep_text", toggle=True)
 
+        hud_draw_timing(L, context)
         L.separator()
         L.operator("hud.update_from_library", icon='FILE_REFRESH')
 
@@ -2185,10 +2484,37 @@ def _tool_mod(obj, group):
     return None
 
 
-def _orient_matrix(center, nrm, cam):
+def _orient_z(center, nrm, cam):
     z = nrm.normalized()
     if cam is not None and (cam.matrix_world.translation - center).dot(z) < 0:
         z = -z
+    return z
+
+
+def _lift_over_neighbours(context, center, z, r, base=0.0005):
+    """Підйом HUD по нормалі, щоб його не ховала сусідня виступаюча поверхня (торець ручки,
+    буртик навколо отвору): кидаємо промені зверху вниз по колах навколо центру (до ~3r),
+    беремо найвищу влучену точку над площиною. Один раз при створенні."""
+    import math as _m
+    hmax = max(r * 4.0, 0.02)
+    x = z.orthogonal().normalized()
+    y = z.cross(x).normalized()
+    deps = context.evaluated_depsgraph_get()
+    best = 0.0
+    for rad, n in ((0.0, 1), (r * 0.9, 12), (r * 1.5, 16), (r * 2.2, 16), (r * 3.0, 16)):
+        for k in range(n):
+            a = 2.0 * _m.pi * k / n
+            p = center + (x * _m.cos(a) + y * _m.sin(a)) * rad
+            hit, loc, _nr, _i, _ob, _mt = context.scene.ray_cast(deps, p + z * hmax, -z, distance=hmax)
+            if hit:
+                h = (loc - center).dot(z)
+                if 5e-5 < h <= hmax:
+                    best = max(best, h)
+    return best + base
+
+
+def _orient_matrix(center, nrm, cam, lift=0.0005):
+    z = _orient_z(center, nrm, cam)
     up = Vector((0, 0, 1))
     x = up.cross(z)
     if x.length < 1e-4:
@@ -2196,7 +2522,7 @@ def _orient_matrix(center, nrm, cam):
     x.normalize()
     y = z.cross(x).normalized()
     m = Matrix((x, y, z)).transposed().to_4x4()
-    m.translation = center + z * 0.0005   # 0.5 мм над поверхнею, щоб не тонуло
+    m.translation = center + z * lift     # 0.5 мм над поверхнею + підйом над сусідніми виступами
     return m
 
 
@@ -2235,10 +2561,12 @@ class HUD_OT_add_diameter(bpy.types.Operator):
         i = 1
         while f"Diameter_{i:02d}" in bpy.data.objects:
             i += 1
+        cam = context.scene.camera
+        lift = _lift_over_neighbours(context, center, _orient_z(center, nrm, cam), r)
         new = src.copy()
         new.name = f"Diameter_{i:02d}"
         _measure_collection(context).objects.link(new)
-        new.matrix_world = _orient_matrix(center, nrm, context.scene.camera)
+        new.matrix_world = _orient_matrix(center, nrm, cam, lift)
         md = _tool_mod(new, DIA_GROUP)
         ids = _hud_ids(md.node_group)
         sl = context.scene.unit_settings.scale_length or 1.0
@@ -2246,12 +2574,14 @@ class HUD_OT_add_diameter(bpy.types.Operator):
         _hud_set(md, ids["Diameter (mm)"], d_mm)
         if "Start Frame" in ids:
             _hud_set(md, ids["Start Frame"], float(context.scene.frame_current))
+        hud_timing_new([md.id_data])
         new.update_tag()
         for o in context.selected_objects:
             o.select_set(False)
         new.select_set(True)
         context.view_layer.objects.active = new
-        self.report({'INFO'}, f"{new.name}: Ø {d_mm:.2f} mm")
+        self.report({'INFO'}, f"{new.name}: Ø {d_mm:.2f} mm" +
+                    (f", піднято на {lift * 1000:.1f} мм над сусідніми виступами" if lift > 0.0006 else ""))
         return {'FINISHED'}
 
 
@@ -2403,6 +2733,7 @@ class HUD_OT_add_angle(bpy.types.Operator):
             _hud_set(md, ids["Arc Radius (mm)"], ray_mm * 0.55)
         if "Start Frame" in ids:
             _hud_set(md, ids["Start Frame"], float(context.scene.frame_current))
+        hud_timing_new([md.id_data])
         new.update_tag()
         for o in context.selected_objects:
             o.select_set(False)
@@ -2448,6 +2779,7 @@ class HUD_OT_add_angle_free(bpy.types.Operator):
             _hud_set(md, ids["Closed Margin"], 0.0872665)      # 5°: кут «зачинено» не перескакує на 360°
         if "Start Frame" in ids:
             _hud_set(md, ids["Start Frame"], float(context.scene.frame_current))
+        hud_timing_new([md.id_data])
         for o in context.selected_objects:
             o.select_set(False)
         new.select_set(True)
@@ -2506,9 +2838,27 @@ class HUD_OT_add_handles(bpy.types.Operator):
             lb = _new_handle(ob.name + "_Label", ob, Vector((r * _m.cos(ang), r * _m.sin(ang), 0)), coll)
             _hud_set(md, ids["Label Point"], lb)
             _hud_set(md, ids["Use Label Point"], True)
+            _hud_set(md, ids["Style"], "Leader")        # у Across/Text Center ручка лише повертає лінію; Leader/Callout ставлять підпис у ручку
         ob.update_tag()
         self.report({'INFO'}, "Ручки створено — рухай емпті")
         return {'FINISHED'}
+
+
+def _angle_from_handles(ob, md, ids):
+    """Реальний кут (0-360°) із ручок A/B, якщо ввімкнено Use Points; інакше None."""
+    import math as _m
+    if not _hud_get(md, ids.get("Use Points")):
+        return None
+    a = _hud_get(md, ids.get("Point A"))
+    b = _hud_get(md, ids.get("Point B"))
+    if a is None or b is None:
+        return None
+    inv = ob.matrix_world.inverted()
+    pa = inv @ a.matrix_world.translation
+    pb = inv @ b.matrix_world.translation
+    if pa.xy.length < 1e-9 or pb.xy.length < 1e-9:
+        return None
+    return (_m.atan2(pb.y, pb.x) - _m.atan2(pa.y, pa.x)) % (2.0 * _m.pi)
 
 
 class OBJECT_PT_RossMeasurePanel(bpy.types.Panel):
@@ -2544,10 +2894,19 @@ class OBJECT_PT_RossMeasurePanel(bpy.types.Panel):
             box = L.box()
             box.label(text=ob.name, icon='RESTRICT_SELECT_OFF')
             col = box.column(align=True)
+            th = _angle_from_handles(ob, md, ids)
+            if th is not None:
+                import math as _m
+                col.label(text=f"Кут з ручок A/B: {_m.degrees(th):.1f}°", icon='DRIVER_ROTATIONAL_DIFFERENCE')
             for nm in ("Angle", "Style", "Label", "Arc Radius (mm)", "Fill Sector", "Fill Pattern", "Pattern Size (mm)", "Face Camera", "Text Rotation", "Mirror Text X", "Mirror Text Y", "Mirror Text Z", "Closed Margin", "Preview Full", "Start Frame"):
                 sck = _hud_sock(md, ids.get(nm))
                 if sck is not None:
-                    col.prop(sck, "value", text=nm)
+                    if nm == "Angle" and th is not None:
+                        rw = col.row(align=True)
+                        rw.enabled = False          # лише стартове значення, кут задають ручки
+                        rw.prop(sck, "value", text="Angle (старт)")
+                    else:
+                        col.prop(sck, "value", text=nm)
             box.operator("hud.add_handles", icon='EMPTY_ARROWS')
         md = _tool_mod(ob, DIA_GROUP) if ob is not None else None
         if md is not None:
@@ -2560,6 +2919,7 @@ class OBJECT_PT_RossMeasurePanel(bpy.types.Panel):
                 if sck is not None:
                     col.prop(sck, "value", text=nm)
             box.operator("hud.add_handles", icon='EMPTY_ARROWS')
+        hud_draw_timing(L, context)
 
 
 class RossToolsPreferences(bpy.types.AddonPreferences):
@@ -4130,6 +4490,7 @@ FUI_KINDS = (
 )
 FUI_GROUPS = tuple(k[4] for k in FUI_KINDS) + ("GN_HUD_Style",)
 FUI_CAM_CON = "HUD Face Camera"
+FUI_START_SCALE = {"TICK": 2.2, "COUNTER": 5.0, "BARS": 3.0}   # метрова сцена
 
 
 def fui_lib_path(context):
@@ -4184,8 +4545,15 @@ class HUD_OT_fui_add(bpy.types.Operator):
             m = obj.modifiers[0]
             ids = _hud_ids(m.node_group)
             _hud_set(m, ids["Fit To"], target)
-            obj.location = target.matrix_world.translation
+            from mathutils import Vector as _Vf
+            _c = [target.matrix_world @ _Vf(c) for c in target.bound_box]
+            obj.location = sum(_c, _Vf()) / 8.0        # центр габариту, а не півот
         _fui_hook_style(context, obj)
+        hud_timing_new([obj])
+        # бібліотечні розміри замалі для метрової сцени (модель ~1 м): стартовий масштаб
+        k = FUI_START_SCALE.get(self.kind, 1.0)
+        if k != 1.0 and context.scene.unit_settings.scale_length >= 0.5:
+            obj.scale = (k, k, k)
         for o in context.selected_objects:
             o.select_set(False)
         obj.select_set(True)
@@ -4219,6 +4587,229 @@ class HUD_OT_face_camera(bpy.types.Operator):
             n += 1
         self.report({'INFO'}, f"Face Camera = {self.state}: {n}")
         return {'FINISHED'}
+
+
+# ==============================================================================
+# HUD TIMING (v4.1): Static / Animated (frames) / Keyed (слайдер Animation)
+# ==============================================================================
+# Timing: Static — елемент повністю з'явився (для налаштування); Frames — як було, за Start Frame/Duration;
+# Keyed — кадр рахується зі слайдера Animation: 0→1 поява, 1→2 зникання (потрібен Use Out).
+# Ключуй Animation (0 → 1 → 2) як Anim Progress у GN_Curve_Seq_Anim. Підміняється лише Scene Time → Frame.
+HUD_TIMING_ITEMS = ("Static", "Frames", "Keyed")
+
+
+def hud_timing_groups():
+    out = []
+    for g in bpy.data.node_groups:
+        if not g.name.startswith("GN_HUD_"):
+            continue
+        names = {i.name for i in _hud_inputs(g)}
+        if "Start Frame" in names and "Out Frame" in names:
+            out.append(g)
+    return out
+
+
+def _hud_timing_patch(ng):
+    """Додає входи Timing і Animation у HUD-групу. Повертає True, якщо групу змінено."""
+    names = {i.name for i in _hud_inputs(ng)}
+    if "Timing" in names or "Start Frame" not in names:
+        return False
+    sts = [n for n in ng.nodes if n.bl_idname == 'GeometryNodeInputSceneTime']
+    frame_links = [(l.to_socket) for n in sts for l in ng.links if l.from_node == n and l.from_socket.name == "Frame"]
+    if not frame_links:
+        return False
+    itf = ng.interface
+    s_t = itf.new_socket("Timing", in_out='INPUT', socket_type='NodeSocketMenu')
+    s_a = itf.new_socket("Animation", in_out='INPUT', socket_type='NodeSocketFloat')
+    s_a.default_value = 1.0
+    s_a.min_value, s_a.max_value = 0.0, 2.0
+    s_a.description = "Keyed: 0→1 поява, 1→2 зникання (Use Out). Ключуй це поле"
+    N = ng.nodes
+    x0, y0 = -1800, -1400
+    gi = N.new('NodeGroupInput'); gi.location = (x0, y0)
+
+    def mk(idn, loc, **kw):
+        n = N.new(idn); n.location = loc
+        for k, v in kw.items():
+            setattr(n, k, v)
+        return n
+
+    def lnk(a, b):
+        ng.links.new(a, b)
+
+    A = gi.outputs["Animation"]
+    if "Duration" in names:
+        dur = gi.outputs["Duration"]
+    else:
+        base = gi.outputs["Leader Duration"] if "Leader Duration" in names else None
+        d = mk('ShaderNodeMath', (x0 + 200, y0 - 600), operation='ADD')
+        if base is not None:
+            lnk(base, d.inputs[0])
+        d.inputs[1].default_value = 60.0
+        dur = d.outputs[0]
+    a_in = mk('ShaderNodeMath', (x0 + 200, y0), operation='MULTIPLY', use_clamp=True)
+    lnk(A, a_in.inputs[0]); a_in.inputs[1].default_value = 1.0
+    f_in = mk('ShaderNodeMath', (x0 + 400, y0), operation='MULTIPLY_ADD')
+    lnk(a_in.outputs[0], f_in.inputs[0]); lnk(dur, f_in.inputs[1]); lnk(gi.outputs["Start Frame"], f_in.inputs[2])
+    a_out = mk('ShaderNodeMath', (x0 + 200, y0 - 200), operation='SUBTRACT', use_clamp=True)
+    lnk(A, a_out.inputs[0]); a_out.inputs[1].default_value = 1.0
+    f_out = mk('ShaderNodeMath', (x0 + 400, y0 - 200), operation='MULTIPLY_ADD')
+    lnk(a_out.outputs[0], f_out.inputs[0])
+    if "Out Duration" in names:
+        lnk(gi.outputs["Out Duration"], f_out.inputs[1])
+    else:
+        f_out.inputs[1].default_value = 20.0
+    lnk(gi.outputs["Out Frame"], f_out.inputs[2])
+    gt = mk('ShaderNodeMath', (x0 + 200, y0 - 400), operation='GREATER_THAN')
+    lnk(A, gt.inputs[0]); gt.inputs[1].default_value = 1.0
+    cond = mk('FunctionNodeBooleanMath', (x0 + 400, y0 - 400), operation='AND')
+    lnk(gt.outputs[0], cond.inputs[0])
+    if "Use Out" in names:
+        lnk(gi.outputs["Use Out"], cond.inputs[1])
+    sw = mk('GeometryNodeSwitch', (x0 + 600, y0 - 100), input_type='FLOAT')
+    lnk(cond.outputs[0], sw.inputs["Switch"]); lnk(f_in.outputs[0], sw.inputs["False"]); lnk(f_out.outputs[0], sw.inputs["True"])
+    f_st = mk('ShaderNodeMath', (x0 + 600, y0 - 500), operation='ADD')
+    lnk(gi.outputs["Start Frame"], f_st.inputs[0]); lnk(dur, f_st.inputs[1])
+    ms = mk('GeometryNodeMenuSwitch', (x0 + 850, y0 - 100), data_type='FLOAT')
+    try:
+        ms.enum_items.clear()
+    except Exception:
+        pass
+    for it in HUD_TIMING_ITEMS:
+        ms.enum_items.new(it)
+    lnk(gi.outputs["Timing"], ms.inputs["Menu"])
+    lnk(f_st.outputs[0], ms.inputs["Static"])
+    lnk(sw.outputs[0], ms.inputs["Keyed"])
+    for to in frame_links:
+        for l in list(ng.links):
+            if l.to_socket == to and l.from_socket.name == "Frame" and l.from_node.bl_idname == 'GeometryNodeInputSceneTime':
+                ng.links.remove(l)
+        lnk(ms.outputs[0], to)
+    lnk(sts[0].outputs["Frame"], ms.inputs["Frames"])
+    try:
+        s_t.default_value = "Frames"
+    except Exception as e:
+        print("[HUD] Timing default:", e)
+    ng["rost_timing"] = 1
+    return True
+
+
+def hud_timing_ensure():
+    n = 0
+    for g in hud_timing_groups():
+        try:
+            if _hud_timing_patch(g):
+                n += 1
+        except Exception as e:
+            print("[HUD] timing patch", g.name, e)
+    # модифікатори, створені до патча, мають порожній Timing / Animation = 0: повертаємо звичну поведінку
+    for o in bpy.data.objects:
+        for md in o.modifiers:
+            if md.type != 'NODES' or not md.node_group or "rost_timing" not in md.node_group:
+                continue
+            ids = _hud_ids(md.node_group)
+            if "Timing" in ids and _hud_get(md, ids["Timing"]) not in HUD_TIMING_ITEMS:
+                _hud_set(md, ids["Timing"], "Frames")
+                _hud_set(md, ids["Animation"], 1.0)
+                o.update_tag()
+    return n
+
+
+def hud_timing_set(objs, mode):
+    n = 0
+    for o in objs:
+        for md in o.modifiers:
+            if md.type != 'NODES' or not md.node_group:
+                continue
+            ids = _hud_ids(md.node_group)
+            if "Timing" in ids:
+                _hud_set(md, ids["Timing"], mode)
+                n += 1
+        o.update_tag()
+    return n
+
+
+def hud_timing_new(objs):
+    """Новий інструмент зʼявляється статичним: група пропатчена, Timing = Static."""
+    hud_timing_ensure()
+    hud_timing_set(objs, "Static")
+
+
+class HUD_OT_timing_all(bpy.types.Operator):
+    """Static / Animated / Keyed для всіх HUD-елементів сцени (або лише виділених)"""
+    bl_idname = "hud.timing_all"
+    bl_label = "HUD Timing"
+    bl_options = {'REGISTER', 'UNDO'}
+    mode: bpy.props.EnumProperty(items=[("Static", "Static", ""), ("Frames", "Animated", ""), ("Keyed", "Keyed", "")], default="Static")
+    only_selected: bpy.props.BoolProperty(name="Only Selected", default=False)
+
+    def execute(self, context):
+        hud_timing_ensure()
+        objs = context.selected_objects if self.only_selected else list(context.scene.objects)
+        n = hud_timing_set(objs, self.mode)
+        self.report({'INFO'}, f"Timing = {self.mode}: {n}")
+        return {'FINISHED'}
+
+
+class HUD_OT_stagger(bpy.types.Operator):
+    """Порядок появи / зникання: зсув Start Frame (і Out Frame) виділених HUD-елементів за іменем"""
+    bl_idname = "hud.stagger"
+    bl_label = "Stagger"
+    bl_options = {'REGISTER', 'UNDO'}
+    step_in: bpy.props.FloatProperty(name="Step In (frames)", default=6.0, min=0.0)
+    step_out: bpy.props.FloatProperty(name="Step Out (frames)", default=6.0, min=0.0)
+    reverse_in: bpy.props.BoolProperty(name="Reverse Appear Order", default=False)
+    reverse_out: bpy.props.BoolProperty(name="Reverse Disappear Order", default=False)
+
+    def execute(self, context):
+        items = []
+        for o in sorted(context.selected_objects, key=lambda x: x.name):
+            for md in o.modifiers:
+                if md.type == 'NODES' and md.node_group and "Start Frame" in _hud_ids(md.node_group):
+                    items.append(md)
+        if len(items) < 2:
+            self.report({'WARNING'}, "Виділи кілька HUD-елементів")
+            return {'CANCELLED'}
+        starts = [_hud_get(m, _hud_ids(m.node_group)["Start Frame"]) for m in items]
+        outs = [_hud_get(m, _hud_ids(m.node_group)["Out Frame"]) for m in items if "Out Frame" in _hud_ids(m.node_group)]
+        b_in = min(starts)
+        b_out = min(outs) if outs else 0.0
+        n = len(items)
+        for i, m in enumerate(items):
+            ids = _hud_ids(m.node_group)
+            k = (n - 1 - i) if self.reverse_in else i
+            _hud_set(m, ids["Start Frame"], b_in + k * self.step_in)
+            if "Out Frame" in ids:
+                k2 = (n - 1 - i) if self.reverse_out else i
+                _hud_set(m, ids["Out Frame"], b_out + k2 * self.step_out)
+        for o in context.selected_objects:
+            o.update_tag()
+        self.report({'INFO'}, f"Stagger: {n} елементів")
+        return {'FINISHED'}
+
+
+def hud_draw_timing(layout, context):
+    """Кнопки Static/Animated/Keyed + слайдер Animation активного елемента + порядок появи."""
+    box = layout.box()
+    box.label(text="Timing", icon='TIME')
+    r = box.row(align=True)
+    for mode, label in (("Static", "Static"), ("Frames", "Animated"), ("Keyed", "Keyed")):
+        r.operator("hud.timing_all", text=label).mode = mode
+    ob = context.active_object
+    if ob is not None:
+        for md in ob.modifiers:
+            if md.type != 'NODES' or not md.node_group:
+                continue
+            ids = _hud_ids(md.node_group)
+            if "Timing" not in ids:
+                continue
+            col = box.column(align=True)
+            col.label(text=md.name)
+            for nm in ("Timing", "Animation"):
+                sck = _hud_sock(md, ids.get(nm))
+                if sck is not None:
+                    col.prop(sck, "value", text=nm)
+    box.operator("hud.stagger", text="Stagger виділених (порядок появи)", icon='SORTTIME')
 
 
 class HUD_OT_preview_all(bpy.types.Operator):
@@ -4266,9 +4857,10 @@ class OBJECT_PT_RossFUIPanel(bpy.types.Panel):
         r = L.row(align=True)
         r.operator("hud.face_camera", text="Face Camera", icon='CAMERA_DATA').state = True
         r.operator("hud.face_camera", text="", icon='X').state = False
+        hud_draw_timing(L, context)
 
 
-fui_classes = (HUD_OT_fui_add, HUD_OT_face_camera, HUD_OT_preview_all, OBJECT_PT_RossFUIPanel)
+fui_classes = (HUD_OT_fui_add, HUD_OT_face_camera, HUD_OT_preview_all, HUD_OT_timing_all, HUD_OT_stagger, OBJECT_PT_RossFUIPanel)
 
 
 def fui_register():
@@ -4733,6 +5325,7 @@ classes = (
     FX_OT_SwitchMode,
     FX_OT_RemoveMask,
     OBJECT_OT_ApplyProximitySetup,
+    OBJECT_OT_RemoveProximitySetup,
     OBJECT_OT_ClearVisibleMaterialSlots,
     OBJECT_OT_ClearAndDelta,
     OBJECT_OT_CadAutoRig,
