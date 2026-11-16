@@ -5796,12 +5796,18 @@ def _draw_report(layout, sc):
             r = None
         if isinstance(r, dict):
             col = layout.column(align=True)
+            model = str(r.get("model", ""))
             for name, d in r.get("doors", {}).items():
-                col.label(text=f"{name}: {d['angle']}°  ({d['limited_by'][:28]})", icon="BONE_DATA")
+                short = name[len(model):] if model and name.startswith(model) else name
+                col.label(text=f"{short}: {d['angle']}°  ({d['limited_by'][:28]})", icon="BONE_DATA")
             col.label(text=f"Замків: {r.get('locks', 0)}", icon="LOCKED")
             for name, g in r.get("springs", {}).items():
                 if isinstance(g, dict):
-                    col.label(text=f"{name}: {g['Lmax_mm']} мм → {g['stroke_angle']}°",
+                    # ключі звіту ригу: open_deg / geom_angle (нові), stroke_angle (старі)
+                    open_deg = g.get("open_deg", g.get("stroke_angle"))
+                    geom = g.get("geom_angle")
+                    tail = f" (геом. {geom}°)" if geom is not None else ""
+                    col.label(text=f"Газліфт {name.rsplit('_', 1)[-1]}: {open_deg}°{tail}",
                               icon="CONSTRAINT_BONE")
                 else:
                     col.label(text=f"{name}: {g}", icon="ERROR")

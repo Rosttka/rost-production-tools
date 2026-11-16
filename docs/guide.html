@@ -1,267 +1,470 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="uk" data-theme="auto">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rost Production Tools 4.0 — гайд</title>
 <style>
-  :root { color-scheme: light dark; --mut: color-mix(in srgb, currentColor 60%, transparent); --line: color-mix(in srgb, currentColor 18%, transparent); --acc: #e0822b; }
-  * { box-sizing: border-box; }
-  body { font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 880px; margin: 0 auto; padding: 32px 20px 80px; color: inherit; overflow-wrap: break-word; }
-  h1 { font-size: 30px; margin: 0 0 6px; }
-  h2 { font-size: 22px; margin: 48px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
-  h3 { font-size: 17px; margin: 26px 0 6px; }
-  p, li { margin: 6px 0; }
-  .lead { color: var(--mut); margin-bottom: 18px; }
-  .toc { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
-  .toc ol { margin: 4px 0; padding-left: 20px; }
-  .step { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; margin: 10px 0; }
-  .n { width: 26px; height: 26px; border-radius: 50%; background: var(--acc); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; margin-top: 2px; }
-  .ui { font-family: ui-monospace, Consolas, monospace; font-size: 14px; background: color-mix(in srgb, currentColor 9%, transparent); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
-  .tip { border-left: 3px solid var(--acc); padding: 6px 12px; margin: 14px 0; background: color-mix(in srgb, var(--acc) 8%, transparent); border-radius: 0 6px 6px 0; }
-  .warn { border-left: 3px solid #c0392b; padding: 6px 12px; margin: 14px 0; background: color-mix(in srgb, #c0392b 8%, transparent); border-radius: 0 6px 6px 0; }
-  figure { margin: 18px 0; }
-  figure svg { width: 100%; height: auto; display: block; color: inherit; }
-  figure img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
-  figcaption { font-size: 14px; color: var(--mut); margin-top: 6px; }
-  .tablewrap { width: 100%; overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 10px 0; }
-  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: break-word; word-break: normal; }
-  th { font-weight: 600; }
+:root{--bg:#f6f7f9;--panel:#ffffff;--ink:#1c2128;--mute:#5b6572;--line:#d9dee5;--accent:#0b7fb5;--accent2:#e07b1a;--code:#eef1f5;--shot:#14171c;--warn:#fff4e0;--warnline:#e9b45f;--ok:#e6f5ec;--okline:#5bb381;--bad:#fdeaea;--badline:#e08a8a}
+html[data-theme=dark]{--bg:#0f1216;--panel:#171b21;--ink:#e6e9ee;--mute:#9aa4b0;--line:#2a313a;--accent:#4cb8ea;--accent2:#f09a46;--code:#1f252d;--shot:#0a0c0f;--warn:#2b2210;--warnline:#8a6a2a;--ok:#12261b;--okline:#2f7a52;--bad:#2c1515;--badline:#8a3a3a}
+@media(prefers-color-scheme:dark){html[data-theme=auto]{--bg:#0f1216;--panel:#171b21;--ink:#e6e9ee;--mute:#9aa4b0;--line:#2a313a;--accent:#4cb8ea;--accent2:#f09a46;--code:#1f252d;--shot:#0a0c0f;--warn:#2b2210;--warnline:#8a6a2a;--ok:#12261b;--okline:#2f7a52;--bad:#2c1515;--badline:#8a3a3a}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow-wrap:anywhere}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:0;max-width:1320px;margin:0 auto}
+nav{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:22px 18px;border-right:1px solid var(--line);font-size:14px}
+nav b{display:block;font-size:15px;margin-bottom:10px}
+nav a{display:block;color:var(--mute);text-decoration:none;padding:3px 0}
+nav a:hover{color:var(--accent)}
+nav a.s2{padding-left:14px;font-size:13px}
+nav .tg{margin-top:14px;padding:6px 10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;cursor:pointer;font:inherit;font-size:13px}
+main{padding:34px 40px 90px;min-width:0}
+h1{font-size:32px;margin:0 0 6px}
+h2{font-size:25px;margin:56px 0 10px;padding-top:12px;border-top:2px solid var(--accent)}
+h3{font-size:19px;margin:34px 0 8px}
+h4{font-size:15px;margin:20px 0 6px;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+p{margin:8px 0}
+.lead{color:var(--mute);font-size:17px;margin-bottom:18px}
+code,kbd{background:var(--code);padding:1px 6px;border-radius:4px;font:13px/1.4 Consolas,Menlo,monospace;overflow-wrap:anywhere}
+.what{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);padding:12px 16px;border-radius:6px;margin:12px 0}
+.what b.t{display:block;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:14px 0}
+ol.steps>li{counter-increment:s;position:relative;padding:4px 0 10px 44px}
+ol.steps>li:before{content:counter(s);position:absolute;left:0;top:2px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;text-align:center;line-height:30px;font-size:14px}
+.note,.warn,.unv,.bug{padding:10px 14px;border-radius:6px;margin:12px 0;border:1px solid;font-size:15px}
+.note{background:var(--ok);border-color:var(--okline)}
+.warn{background:var(--warn);border-color:var(--warnline)}
+.bug{background:var(--bad);border-color:var(--badline)}
+.unv{background:var(--code);border-color:var(--line);color:var(--mute)}
+.note:before{content:"Нюанс · ";font-weight:700}
+.warn:before{content:"Увага · ";font-weight:700}
+.bug:before{content:"Баг/обмеження · ";font-weight:700}
+.unv:before{content:"Не перевірено · ";font-weight:700}
+.tbl{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--code)}
+td:first-child{white-space:nowrap}
+.shot{margin:16px 0;background:var(--shot);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.shot .im{position:relative;line-height:0}
+.shot img{width:100%;height:auto;display:block}
+.shot .cap{padding:9px 14px;color:#c9d1db;font-size:13.5px;line-height:1.5;background:#1b2027}
+.shot .cap b{color:#fff}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;padding:1px 7px;border-radius:10px;margin-right:6px;vertical-align:1px}
+.t-do{background:#5a6572;color:#fff}.t-act{background:var(--accent);color:#fff}.t-res{background:#2f9d62;color:#fff}
+.mk{position:absolute;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:var(--accent2);color:#fff;font:700 13px/26px sans-serif;text-align:center;box-shadow:0 0 0 2px #000a}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:16px 0}
+.row .shot{margin:0}
+.split{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:22px;align-items:start;margin:16px 0}
+.split .shot{margin:0}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}main{padding:22px 16px 70px}.split{grid-template-columns:1fr}}
+@media(max-width:700px){td:first-child{white-space:normal}table{font-size:13.5px}th,td{padding:6px 7px}}
+@media print{nav{display:none}.wrap{display:block}}
 </style>
 </head>
 <body>
+<div class="wrap">
+<nav id="toc"><b>Rost Production Tools 4.0</b></nav>
+<main>
+<h1>Rost Production Tools 4.0 — гайд</h1>
+<p class="lead">Аддон для Blender 5.2: STEP-конвеєр, авториг, світло, HUD-графіка, пас-рендер. Усе нижче запущено на тестовій сцені (помаранчевий пристрій з ручкою, куполом і панеллю); що не вдалося перевірити — позначено <b>«Не перевірено»</b>.</p>
 
-<h1>Rost Production Tools 4.0</h1>
-<p class="lead">Гайд по всьому аддону: що є на панелі, як кожен інструмент використовується крок за кроком, і що зроблено в 4.0. Вкладка <span class="ui">Rost Tools</span> у бічній панелі 3D-в'юпорту (клавіша N).</p>
+<div class="what"><b class="t">Встановлення</b>
+Файл <code>rost_production_tools.py</code> покласти в <code>%APPDATA%\Blender Foundation\Blender\5.2\scripts\addons\</code>, увімкнути в Preferences → Add-ons. Панелі — N-панель 3D-вʼюпорта, вкладка <b>Rost Tools</b>. Кнопка <b>«?»</b> у заголовку Production Tools відкриває цей гайд.<br>
+Порядок панелей: Render Passes · Production Tools · HUD Callout · HUD Measure · HUD Section · HUD Volume Cut · HUD Style · HUD FUI · Rost Light Rig · STEP Pipeline. Усі згорнуті за замовчуванням.</div>
 
-<div class="toc">
-  <strong>Зміст</strong>
-  <ol>
-    <li><a href="#map">Карта вкладки Rost Tools</a></li>
-    <li><a href="#step">STEP Pipeline — імпорт STEP, матеріали, риг</a></li>
-    <li><a href="#rig">CAD Auto-Rig — кістки для будь-якої моделі</a></li>
-    <li><a href="#light">Rost Light Rig — світло з контролерами</a></li>
-    <li><a href="#hud">HUD-інструменти — Callout, Measure, Section, Style, FUI, Volume Cut</a></li>
-    <li><a href="#prod">Production Tools — Proximity Alpha, Gradient Mask, Scene Utilities</a></li>
-    <li><a href="#passes">Render Passes — рендер по шарах</a></li>
-    <li><a href="#trouble">Типові проблеми</a></li>
-  </ol>
+<div class="note">HUD-інструменти беруть шаблони з бібліотеки <code>HUD_Elements.blend</code> (шлях — у Preferences аддона, поле <b>HUD Library</b>; поруч папки <code>Callout_Presets</code>, файли <code>HUD_FUI.blend</code> та ін.). Без цих файлів кнопки Add повертають помилку «Не знайдено бібліотеку».</div>
+<div class="note">Усі HUD-елементи анімовані: <b>Start Frame</b> ставиться на кадр, на якому ти натиснув Add. На самому стартовому кадрі елемент ще порожній — переглядай на кадрах після нього або вмикай <b>Preview Full</b> / <b>Preview All</b>.</div>
+
+<h2 id="step">1. STEP Pipeline</h2>
+<div class="what"><b class="t">Що це</b>Панель-обгортка над скриптами пайплайна (<code>G:\My Drive\WORK\Blender\AssetsLibrary\EXM_Pipeline</code>) і аддоном CADder: імпорт STEP → тесселяція → матеріали (RAL-фарба) → риг дверей і газліфтів → звіт. Сама панель нічого не рахує: без цієї папки і CADder вона не працює.</div>
+
+<h3>Крок за кроком</h3>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/step-01-panel-before.png" alt="STEP Pipeline до запуску"></div><div class="cap"><span class="tag t-do">ДО</span>Панель перед запуском: шлях до .stp, три галочки, Run.</div></div>
+<div>
+<ol class="steps">
+<li>Розгорни <b>STEP Pipeline</b>. У полі <b>Імпорт</b> вкажи <code>.stp</code> файл.</li>
+<li>Галочки: <b>Нова сцена</b> (модель імпортується в окрему сцену), <b>Тесселяція 0.4 мм / 12°</b>, <b>Риг</b>.</li>
+<li>Натисни <b>Run</b>. На шафі <code>6500CO0604</code> весь цикл зайняв <b>76.5 с</b>; у блоці <b>Статус</b> зʼявляється <code>done</code> і час.</li>
+<li>Розгорни <b>Звіт</b> — там фарба, незнайдені матеріали, кути дверей, газліфти.</li>
+</ol>
+</div></div>
+
+<div class="row">
+<div class="shot"><div class="im"><img src="img/step-02-result-closed.jpg" alt="Результат: шафа закрита"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Модель імпортована, матеріали застосовані, двері закриті.</div></div>
+<div class="shot"><div class="im"><img src="img/step-04-rig-open.jpg" alt="Риг: двері відкриті"></div><div class="cap"><span class="tag t-res">РИГ</span>Те саме після повороту дверей і кришки ригом (позу ставить скрипт; кути — у звіті).</div></div>
 </div>
-
-<h2 id="map">1. Карта вкладки Rost Tools</h2>
-<p>Усі блоки живуть в одній вкладці. Блоки розгортаються кліком на заголовок. Render Passes тепер теж тут (раніше була вкладка EXM).</p>
-
-<figure>
-<img src="img/sidebar.png" alt="Бічна панель Blender, вкладка Rost Tools: блоки Render Passes, Production Tools, HUD-блоки, Rost Light Rig і STEP Pipeline">
-<figcaption>Скріншот з Blender: вкладка Rost Tools у 3D-в'юпорті з блоками Render Passes, Production Tools, HUD-блоками, Rost Light Rig і STEP Pipeline.</figcaption>
-</figure>
-
-<figure>
-<svg viewBox="0 0 640 330" role="img" aria-label="Схема вкладки Rost Tools: блоки панелі зверху вниз">
-  <g font-family="system-ui, sans-serif" font-size="13" fill="currentColor" stroke="currentColor">
-    <rect x="40" y="10" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="30" text-anchor="middle" stroke="none">Render Passes</text>
-
-    <rect x="40" y="50" width="400" height="60" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="72" text-anchor="middle" stroke="none">Production Tools</text>
-    <text x="240" y="92" text-anchor="middle" stroke="none" font-size="12" opacity=".7">Proximity Alpha · Gradient Mask · Rigging · Scene Utilities</text>
-
-    <rect x="40" y="122" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="142" text-anchor="middle" stroke="none">HUD Callout</text>
-    <rect x="40" y="160" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="180" text-anchor="middle" stroke="none">HUD Measure</text>
-    <rect x="40" y="198" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="218" text-anchor="middle" stroke="none">HUD Section · HUD Style · HUD FUI · HUD Volume Cut</text>
-
-    <rect x="40" y="240" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="260" text-anchor="middle" stroke="none">Rost Light Rig</text>
-    <rect x="40" y="278" width="400" height="30" rx="6" fill="none" stroke-width="1.2"/>
-    <text x="240" y="298" text-anchor="middle" stroke="none">STEP Pipeline</text>
-
-    <text x="456" y="72" stroke="none" font-size="12" opacity=".7">← загальні інструменти</text>
-    <text x="456" y="142" stroke="none" font-size="12" opacity=".7">← виноски й вимірювання</text>
-    <text x="456" y="260" stroke="none" font-size="12" opacity=".7">← світло для сцени</text>
-    <text x="456" y="298" stroke="none" font-size="12" opacity=".7">← пайплайн STEP-моделей</text>
-  </g>
-</svg>
-<figcaption>Порядок блоків у панелі: Render Passes, Production Tools, HUD-блоки, Light Rig, STEP Pipeline.</figcaption>
-</figure>
-
-<h2 id="step">2. STEP Pipeline — імпорт STEP, матеріали, риг</h2>
-<p>Блок призначений для STEP-файлів з папки моделей (зараз EXM). Він імпортує модель, перетесселює її, призначає матеріали, будує риг і лишає сцену готовою для збірки.</p>
-<figure><img src="img/step-pipeline.png" alt="Блок STEP Pipeline у Blender" style="max-width:320px"><figcaption>Блок STEP Pipeline: імпорт, окремі кроки, деталізація, статус.</figcaption></figure>
-
-<figure>
-<svg viewBox="0 0 640 120" role="img" aria-label="Потік STEP Pipeline: файл, імпорт, тесселяція, матеріали, риг, сцена">
-  <g font-family="system-ui, sans-serif" font-size="13" fill="currentColor" stroke="currentColor" stroke-width="1.2">
-    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><polygon points="0,0 10,5 0,10" fill="currentColor" stroke="none"/></marker></defs>
-    <rect x="4" y="40" width="96" height="40" rx="6" fill="none"/><text x="52" y="65" text-anchor="middle" stroke="none">STEP</text>
-    <line x1="100" y1="60" x2="122" y2="60" marker-end="url(#ar)"/>
-    <rect x="124" y="40" width="96" height="40" rx="6" fill="none"/><text x="172" y="58" text-anchor="middle" stroke="none">Імпорт</text><text x="172" y="72" text-anchor="middle" stroke="none" font-size="11" opacity=".7">CADder</text>
-    <line x1="220" y1="60" x2="242" y2="60" marker-end="url(#ar)"/>
-    <rect x="244" y="40" width="96" height="40" rx="6" fill="none"/><text x="292" y="58" text-anchor="middle" stroke="none">Тесселяція</text><text x="292" y="72" text-anchor="middle" stroke="none" font-size="11" opacity=".7">0.4 мм / 12°</text>
-    <line x1="340" y1="60" x2="362" y2="60" marker-end="url(#ar)"/>
-    <rect x="364" y="40" width="96" height="40" rx="6" fill="none"/><text x="412" y="65" text-anchor="middle" stroke="none">Матеріали</text>
-    <line x1="460" y1="60" x2="482" y2="60" marker-end="url(#ar)"/>
-    <rect x="484" y="40" width="72" height="40" rx="6" fill="none"/><text x="520" y="65" text-anchor="middle" stroke="none">Риг</text>
-    <line x1="556" y1="60" x2="578" y2="60" marker-end="url(#ar)"/>
-    <rect x="580" y="40" width="56" height="40" rx="6" fill="none"/><text x="608" y="65" text-anchor="middle" stroke="none" font-size="12">Сцена</text>
-  </g>
-</svg>
-<figcaption>Кнопка <span class="ui">Run</span> проходить весь потік за один клік. Окремі кроки можна запускати поодинці в блоці «Окремі кроки».</figcaption>
-</figure>
-
-<h3>Крок 1. Підготуй сцену</h3>
-<div class="step"><div class="n">1</div><div>Для нової моделі увімкни <span class="ui">Нова сцена</span>: створиться сцена <span class="ui">PIPE_&lt;код&gt;</span>. Якщо вимкнути, імпорт піде в поточну сцену, а вона має бути порожньою (без мешів).</div></div>
-
-<h3>Крок 2. Вибери STEP і налаштуй перемикачі</h3>
-<div class="step"><div class="n">2</div><div>У розділі <span class="ui">Імпорт</span> вкажи шлях до STEP-файлу.</div></div>
-<div class="step"><div class="n">3</div><div><span class="ui">Тесселяція 0.4 мм / 12°</span> — вмикай для звичайних моделей. Вимкнення залишить налаштування CADder за замовчуванням.</div></div>
-<div class="step"><div class="n">4</div><div><span class="ui">Риг</span> — вмикай, щоб після матеріалів одразу побудувався риг (CAD Auto-Rig плюс механіка дверей, замків і газліфтів).</div></div>
-
-<h3>Крок 3. Натисни Run</h3>
-<div class="step"><div class="n">5</div><div>Натисни велику кнопку <span class="ui">Run</span>. Статус і час видно внизу блоку. Поки модель обробляється, кнопка неактивна.</div></div>
-<div class="step"><div class="n">6</div><div>Перевір звіт (розгортається галочкою <span class="ui">Звіт</span>): фарба, незмаплені матеріали, розміри дверей і кути, кількість замків, ходи газліфтів.</div></div>
-
-<div class="tip">Якщо в звіті є <strong>Незмаплені</strong>, деталь отримала магентовий матеріал <span class="ui">_UNMAPPED</span>. Це сигнал додати правило в <span class="ui">material_rules.json</span>, а не помилка імпорту.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/step-03-panel-after.png" alt="Панель після Run"></div><div class="cap"><span class="tag t-res">ПІСЛЯ</span>Статус <code>done</code>, «Риг побудовано», розгорнутий звіт.</div></div>
+<div>
+<h4>Що показує звіт</h4>
+<p>Фарба (<code>RAL 7035 textured</code>), список деталей без матеріалу, по кожних дверях — кут відкриття і чим він обмежений (<code>max_deg</code> або геометрія), замки, газліфти: хід у градусах і геометричний кут. Для шафи 6500CO0604: BD/FD 180°, TD 95°, газліфти L/R 95° (геом. 137.6°).</p>
+<div class="bug">У вихідній версії аддона звіт падав на <code>KeyError: 'Lmax_mm'</code> (скрипт пайплайна повертає ключі <code>open_deg / stroke_angle</code>, а панель чекала старі). У файлі, що лежить у репозиторії, це виправлено; в інстальованій копії <code>_13.py</code> — ні, її треба замінити.</div>
+</div></div>
 
 <h3>Окремі кроки</h3>
-<div class="tablewrap"><table>
-  <tr><th>Кнопка</th><th>Коли використовувати</th></tr>
-  <tr><td><span class="ui">Materials only</span></td><td>Перепризначити матеріали всім мешам поточної сцени, наприклад після зміни правил матеріалів.</td></tr>
-  <tr><td><span class="ui">Rig only</span></td><td>Побудувати риг для сцени. Доступна, поки ригу в сцені ще немає (одна дія на сцену).</td></tr>
-  <tr><td><span class="ui">Reset rig pose</span></td><td>Повернути всі кістки в рест-позу (закрито). Корисно, якщо риг зламався після ручних змін.</td></tr>
-</table></div>
+<table><tr><th>Кнопка</th><th>Що робить</th></tr>
+<tr><td>Materials only</td><td>Лише матеріали на вже імпортованій моделі (без імпорту й ригу).</td></tr>
+<tr><td>Rig only</td><td>Лише побудова ригу дверей/газліфтів.</td></tr>
+<tr><td>Reset rig pose</td><td>Повертає риг у вихідну (закриту) позу.</td></tr></table>
 
-<h3>Деталізація для крупних планів</h3>
-<div class="step"><div class="n">1</div><div>Виділи деталі у в'юпорті. Якщо виділити empty, перетесселюються всі деталі під ним.</div></div>
-<div class="step"><div class="n">2</div><div>У полях <span class="ui">Відхилення, мм</span> (за замовчуванням 0.05) і <span class="ui">Кут, °</span> (за замовчуванням 5) задай точність. Менші значення дають точнішу сітку і більше граней.</div></div>
-<div class="step"><div class="n">3</div><div>Натисни <span class="ui">Перетесселювати виділене</span>. Деталь лишається на місці: риг, анімація й матеріали зберігаються.</div></div>
-<div class="step"><div class="n">4</div><div>Кнопка <span class="ui">↺</span> повертає робочу точність 0.4 мм / 12°.</div></div>
+<h3>Деталізація (крупні плани)</h3>
+<div class="what"><b class="t">Що це</b>Перетесселяція виділених деталей дрібніше — для крупних планів, де 0.4 мм видно гранями.</div>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/step-05-retess-before.jpg" alt="Деталь до перетесселяції"></div><div class="cap"><span class="tag t-do">ДО</span>Виділена деталь, 15 325 вершин, грані читаються.</div></div>
+<div class="shot"><div class="im"><img src="img/step-06-retess-after.jpg" alt="Деталь після перетесселяції"></div><div class="cap"><span class="tag t-res">ПІСЛЯ</span>Відхилення 0.05 мм / 5° → 95 414 вершин, 17 с.</div></div>
+</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/step-07-panel-retess.png" alt="Панель після перетесселяції"></div><div class="cap">Рядок «Останнє: 1 дет., 0.05 мм / 5°, 15325→…»; кнопка ↺ справа відкочує.</div></div>
+<div><ol class="steps">
+<li>Виділи деталь(і).</li>
+<li>Постав <b>Відхилення, мм</b> (0.05 — крупний план) і <b>Кут, °</b>.</li>
+<li><b>Перетесселювати виділене</b>. Іконка справа повертає попередню сітку.</li></ol>
+<div class="warn">Кількість вершин росте ~6× — перетесселюй лише те, що потрапляє в крупний план.</div></div></div>
 
-<div class="warn">Деталі не спрощуємо. Перетесселяція робить сітку точнішою, тому її застосовують лише до крупних планів перед фінальним рендером.</div>
+<div class="unv">Запущено лише на одному файлі (6500CO0604). Інші STEP, режим без галочки «Нова сцена» і Materials only/Rig only окремо — не проганялися.</div>
 
-<h2 id="rig">3. CAD Auto-Rig — кістки для будь-якої моделі</h2>
-<p>CAD Auto-Rig будує скелет по дереву об'єктів. Він не знає, що таке двері чи газліфт, тому підходить для будь-якого STEP-файлу або будь-якої сцени з мешами.</p>
+<h2 id="rig">2. CAD Auto-Rig</h2>
+<div class="what"><b class="t">Що це</b>Кнопка в Production Tools → блок <b>Rigging</b>. Будує арматуру для будь-якої моделі з окремих мешів: по кістці <code>B_&lt;імʼя меша&gt;</code> на кожен виділений меш у його півоті.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/tools-01-panel.png" alt="Production Tools з налаштуваннями ригу"></div><div class="cap">Production Tools: блок Rigging з розгорнутими «Налаштування».</div></div>
+<div>
+<h4>Що створюється</h4>
+<ul>
+<li>Арматура <code>Armature</code> (імʼя фіксоване — так Unreal не додає зайву кореневу кістку) і корінь <code>RigRoot</code>.</li>
+<li>Кістка <code>B_&lt;mesh&gt;</code> на кожен меш; ієрархія кісток = ієрархія обʼєктів.</li>
+<li>Кожен меш отримує vertex group і модифікатор Armature.</li>
+<li>Кріплення, імена яких починаються з патерна (<b>Кріплення</b>, типово <code>STK-</code>) → кістка-кільце (з автоосью).</li>
+<li>Empty → допоміжні кістки, не деформують. Колекція <code>NoBone</code> або властивість <code>no_bone</code> → деталь їде з кісткою батька.</li>
+<li>Повторний запуск безпечний: імена кісток не змінюються, анімація лишається.</li></ul></div></div>
 
-<figure>
-<svg viewBox="0 0 640 230" role="img" aria-label="Ієрархія кісток CAD Auto-Rig: Armature, RigRoot, кістки деталей">
-  <g font-family="system-ui, sans-serif" font-size="13" fill="currentColor" stroke="currentColor" stroke-width="1.2">
-    <rect x="240" y="10" width="160" height="32" rx="6" fill="none"/><text x="320" y="31" text-anchor="middle" stroke="none">Armature</text>
-    <line x1="320" y1="42" x2="320" y2="62"/>
-    <rect x="240" y="62" width="160" height="32" rx="6" fill="none"/><text x="320" y="83" text-anchor="middle" stroke="none">RigRoot</text>
-    <line x1="320" y1="94" x2="320" y2="114"/>
-    <line x1="110" y1="114" x2="530" y2="114"/>
-    <line x1="110" y1="114" x2="110" y2="134"/><line x1="320" y1="114" x2="320" y2="134"/><line x1="530" y1="114" x2="530" y2="134"/>
-    <rect x="30" y="134" width="160" height="32" rx="6" fill="none"/><text x="110" y="155" text-anchor="middle" stroke="none">B_Корпус</text>
-    <rect x="240" y="134" width="160" height="32" rx="6" fill="none"/><text x="320" y="155" text-anchor="middle" stroke="none">B_Двері_FD</text>
-    <rect x="450" y="134" width="160" height="32" rx="6" fill="none"/><text x="530" y="155" text-anchor="middle" stroke="none">B_Замок</text>
-    <line x1="320" y1="166" x2="320" y2="190" stroke-dasharray="4 3"/>
-    <rect x="240" y="190" width="160" height="30" rx="6" fill="none" stroke-dasharray="4 3"/><text x="320" y="210" text-anchor="middle" stroke="none" font-size="12">допоміжна (з empty)</text>
-  </g>
-</svg>
-<figcaption>Кожен меш отримує свою кістку (префікс <span class="ui">B_</span>) у його півоті. Ієрархія повторює ієрархію об'єктів. Empty стають допоміжними кістками без деформації.</figcaption>
-</figure>
+<h3>Крок за кроком</h3>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/rig-01-before.jpg" alt="Тестова деталь без ригу"></div><div class="cap"><span class="tag t-do">ДО</span>Тестова збірка: основа, важіль, дві шпильки-кріплення (<code>STK-…</code>).</div></div>
+<div class="shot"><div class="im"><img src="img/rig-03-result.jpg" alt="Після CAD Auto-Rig"></div><div class="cap"><span class="tag t-res">ПІСЛЯ</span>Арматура створена: кістки на кожній деталі, кільця на кріпленнях.</div></div>
+<div class="shot"><div class="im"><img src="img/rig-04-posed.jpg" alt="Риг у позі"></div><div class="cap"><span class="tag t-res">ПОЗА</span>Кістку важеля повернуто — деталь і її дочірні (з кріпленнями) їдуть разом.</div></div>
+</div>
+<ol class="steps">
+<li>Виділи всі меші моделі (тільки меші; Empty допустимі — стануть допоміжними кістками).</li>
+<li>Production Tools → <b>CAD Auto-Rig</b>.</li>
+<li>Перейди в Pose Mode і крути кістки <code>B_…</code>.</li></ol>
 
-<h3>Як запустити</h3>
-<div class="step"><div class="n">1</div><div>Виділи меші, які треба зарадити. Порожні об'єкти можна виділити разом із ними, вони стануть допоміжними кістками.</div></div>
-<div class="step"><div class="n">2</div><div>У блоці <span class="ui">Production Tools → Rigging</span> натисни <span class="ui">CAD Auto-Rig</span>.</div></div>
-<div class="step"><div class="n">3</div><div>Налаштування (кільця, довжини кісток, обертання) — у розгортному блоці <span class="ui">Налаштування</span>. Назви для UE (<span class="ui">Armature</span>, <span class="ui">RigRoot</span>, <span class="ui">B_&lt;меш&gt;</span>) фіксовані.</div></div>
-<div class="step"><div class="n">4</div><div>Повторний запуск безпечний: меші вже прив'язані до арматури, тому кістки перебудуються без подвоєння.</div></div>
+<h3>Налаштування</h3>
+<table><tr><th>Параметр</th><th>Що робить</th></tr>
+<tr><td>Кріплення</td><td>Патерн імені кріплення (типово <code>STK-</code>); меш з таким імʼям → кістка-кільце.</td></tr>
+<tr><td>Авто-вісь кілець</td><td>Вісь кільця визначається за геометрією кріплення.</td></tr>
+<tr><td>Допуск круглості</td><td>0.20 — наскільки меш має бути круглим, щоб вважатися кільцем. Також можна примусово: властивість <code>ring</code> = 1 / 0 на обʼєкті.</td></tr>
+<tr><td>Голова</td><td>Де ставиться голова кістки (типово — півот обʼєкта).</td></tr>
+<tr><td>Довжина × габарит, Мін / Макс</td><td>Довжина кістки = габарит × коефіцієнт, обмежена мін/макс (в одиницях сцени).</td></tr>
+<tr><td>Rot mode</td><td>Режим обертання кісток (типово Euler XYZ).</td></tr></table>
 
-<div class="tip">Окремо від CAD Auto-Rig STEP Pipeline додає механіку (обмеження обертання дверей, замків, Damped Track на газліфтах). Для загальної моделі без механіки достатньо CAD Auto-Rig.</div>
+<div class="bug">Кістка <code>RigRoot</code> вийшла довжиною ~10 одиниць: у метровій сцені вона «стирчить» на висоту будинку. Для скріншотів я вкоротив хвіст кістки в Edit Mode; на анімацію це не впливає.</div>
+<div class="bug">Якщо в файлі вже є обʼєкт з імʼям <code>Armature</code>, Blender назве нову арматуру <code>Armature.001</code> — контракт імені для Unreal порушиться. Перейменуй старий обʼєкт перед запуском.</div>
+<div class="unv">Перевірено на синтетичній збірці з руки/важелів і кріплень, не на реальній моделі STEP.</div>
+<h2 id="light">3. Rost Light Rig</h2>
+<div class="what"><b class="t">Що це</b>Один набір світла на одній арматурі: фіксовані слоти <b>Main</b> (Key, Fill, Rim, Kicker, Top, Strip_L, Strip_R), <b>Additional</b> (6), <b>Spots</b> (4), <b>Points</b> (4). Стан кожної лампи пишеться в action — його можна анімувати, зберігати в пресети і переносити між сценами.</div>
 
-<h2 id="light">4. Rost Light Rig — світло з контролерами</h2>
-<p>Один арматурний риг тримає 21 слот світла з фіксованими каналами. Тобто будь-яка дія (action) з налаштуваннями працює на іншому екземплярі рига однаково.</p>
+<h3>Додати риг</h3>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/light-01-panel-empty.png" alt="Порожня панель"></div><div class="cap"><span class="tag t-do">ДО</span>«No light rig in this scene» + Add Light Rig. Центр = виділений меш, а без виділення — усі видимі меші.</div></div>
+<div class="shot"><div class="im"><img src="img/light-02-rig-added.jpg" alt="Риг додано"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Add Light Rig: арматура <code>LGT_Rig</code> навколо моделі; видно кільця орбіт і ручки кісток.</div></div>
+<div class="shot"><div class="im"><img src="img/light-03-render-default.jpg" alt="Рендер зі стандартним світлом"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Рендер зі стандартним станом: Key, Fill, Rim, Top увімкнені.</div></div>
+</div>
+<ol class="steps">
+<li>Виділи головну модель (або нічого — тоді центр рахується по всіх видимих мешах).</li>
+<li><b>Add Light Rig</b>.</li></ol>
 
-<figure>
-<svg viewBox="0 0 640 300" role="img" aria-label="Схема Light Rig: модель в центрі, джерело світла, ціль на куполі, лінія прицілу">
-  <g font-family="system-ui, sans-serif" font-size="13" fill="currentColor" stroke="currentColor" stroke-width="1.2">
-    <rect x="20" y="16" width="300" height="22" rx="4" fill="none" opacity=".6"/>
-    <text x="30" y="31" stroke="none" font-size="12">Main 7 · Additional 6 · Spots 4 · Points 4</text>
-    <path d="M90 230 A230 230 0 0 1 550 230" fill="none" stroke-dasharray="4 4" opacity=".5"/>
-    <text x="320" y="62" text-anchor="middle" stroke="none" font-size="12" opacity=".7">купол (1.25 × радіус моделі)</text>
-    <line x1="60" y1="230" x2="580" y2="230" opacity=".5"/>
-    <rect x="260" y="180" width="120" height="50" rx="8" fill="none"/>
-    <text x="320" y="210" text-anchor="middle" stroke="none">Модель</text>
-    <circle cx="150" cy="120" r="14" fill="none"/>
-    <text x="150" y="100" text-anchor="middle" stroke="none">Джерело</text>
-    <line x1="164" y1="128" x2="260" y2="180" stroke-dasharray="4 3" opacity=".6"/>
-    <circle cx="460" cy="92" r="9" fill="none"/>
-    <text x="460" y="76" text-anchor="middle" stroke="none">Ціль</text>
-    <line x1="150" y1="120" x2="460" y2="92" stroke-width="2"/>
-    <text x="305" y="110" text-anchor="middle" stroke="none" font-size="12" opacity=".7">лінія прицілу</text>
-  </g>
-</svg>
-<figcaption>Джерело — маніпулятор у формі лампи. Ціль лежить на куполі, тому цілі легко розрізнити. Лінія показує напрям прицілу.</figcaption>
-</figure>
+<h3>Слоти і налаштування лампи</h3>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/light-04-panel-main.png" alt="Main слоти"></div><div class="cap">Main 4/7: око — слот увімкнено; стрілка справа вибирає лампу. Активний слот — підсвічений.</div></div>
+<div>
+<ul>
+<li><b>KEY ALL (frame N)</b> — ставить ключ усіх слотів на поточному кадрі.</li>
+<li><b>Presets</b> — збережені набори.</li>
+<li><b>Main / Additional / Spots / Points</b> — списки слотів. Additional/Spots/Points показують номери 1…6 / 1…4 / 1…4; клік вмикає слот.</li>
+<li><b>Settings: &lt;слот&gt;</b> — параметри активної лампи.</li></ul>
+<div class="note">Слоти Additional/Spots/Points спершу порожні (0/6, 0/4, 0/4) — вмикай номером.</div>
+</div></div>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/light-05-panel-settings.png" alt="Settings: Key"></div><div class="cap">Settings: Key — Exposure, Temperature K, Spread °, форма (Square / Rect / Disk / Ellipse), Size, Tint, Power W.</div></div>
+<div class="shot"><div class="im"><img src="img/light-06-panel-groups.png" alt="Additional, Spots, Points"></div><div class="cap">Розгорнуті Additional / Spots / Points — слоти пронумеровані.</div></div>
+</div>
 
-<h3>Крок 1. Додай риг</h3>
-<div class="step"><div class="n">1</div><div>Виділи об'єкти, які треба освітити. Без виділення риг охопить усі видимі меші, крім студії, практикалів і віджетів.</div></div>
-<div class="step"><div class="n">2</div><div>Додай через <span class="ui">Add → Light → Rost Light Rig</span> або кнопкою <span class="ui">Add Light Rig</span> на панелі.</div></div>
+<table><tr><th>Параметр</th><th>Що робить</th></tr>
+<tr><td>Enabled / On</td><td>Вмикає лампу (дзеркалить око слота).</td></tr>
+<tr><td>Exposure</td><td>Експозиція лампи; допоміжний слайдер під параметром — додатковий зсув.</td></tr>
+<tr><td>Temperature K</td><td>Колірна температура в Кельвінах (6500 K — нейтральна); допоміжний слайдер поруч.</td></tr>
+<tr><td>Spread °</td><td>Кут розсіювання світла.</td></tr>
+<tr><td>Square / Rect / Disk / Ellipse</td><td>Форма area-лампи; Rect і Ellipse мають Size X / Size Y.</td></tr>
+<tr><td>Tint, Power W</td><td>Колір і потужність.</td></tr>
+<tr><td>Select lamp</td><td>Виділяє обʼєкт лампи, щоб відкрити її у Properties.</td></tr></table>
 
-<h3>Крок 2. Увімкни слоти і налаштуй їх</h3>
-<div class="step"><div class="n">3</div><div>За замовчуванням увімкнені Key, Fill, Rim і Top. Інші слоти вмикаються прапорцем з оком біля назви. Групи (Main, Additional, Spots, Points) згорнуті, щоб панель не розросталась.</div></div>
-<div class="step"><div class="n">4</div><div>Вибери слот у списку — відповідне джерело підсвітиться у в'юпорті. І навпаки: клік на маніпулятор у в'юпорті вибирає слот на панелі.</div></div>
-<div class="step"><div class="n">5</div><div>У секції <span class="ui">Settings</span> крути слайдери: <span class="ui">Exposure</span> (±4 стопи), <span class="ui">Temperature</span> (±3800 K), <span class="ui">Spread</span> (±90°) або <span class="ui">Cone</span> (±60°), плюс <span class="ui">Tint</span>, <span class="ui">Power</span>, розмір і форма (Square, Rect, Disk, Ellipse).</div></div>
-<div class="step"><div class="n">6</div><div>Кнопка <span class="ui">Select lamp</span> виділяє саму лампу — там колір, потужність і ноди шейдера (в Cycles вільні лише ноди, решта керується з рига).</div></div>
-
-<h3>Крок 3. Анімуй</h3>
-<div class="step"><div class="n">7</div><div>На першому кадрі натисни велику <span class="ui">KEY ALL</span> — вона ключує все: увімкнені слоти, налаштування, положення кісток і слайдерів. Далі анімацію ключуєш сам.</div></div>
+<h3>Підлаштування під сцену</h3>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/light-07-render-tuned.jpg" alt="Після налаштування"></div><div class="cap"><span class="tag t-res">ПІСЛЯ</span>Увімкнено Kicker (Rect 0.5×1.5, 5000 K, Power 180 W) — додався другий акцент світла.</div></div>
+<div class="shot"><div class="im"><img src="img/light-08-panel-tuned.png" alt="Панель після налаштування"></div><div class="cap">Панель з активним Kicker.</div></div>
+</div>
 
 <h3>Пресети</h3>
-<div class="tablewrap"><table>
-  <tr><th>Дія</th><th>Що робить</th></tr>
-  <tr><td><span class="ui">Save (first frame)</span></td><td>Зберігає стан рига з першого кадру сцени як JSON-файл. Анімація не зберігається, тільки один кадр. Та сама назва перезаписує файл.</td></tr>
-  <tr><td><span class="ui">Apply</span></td><td>Ставить пресет на поточному кадрі. Якщо риг уже має ключі, ключує і цей кадр, інші ключі лишаються.</td></tr>
-  <tr><td><span class="ui">Fit to model size</span></td><td>Пресет, зроблений під модель іншого розміру: відстані й розміри ламп масштабуються, потужність — квадратом коефіцієнта.</td></tr>
-  <tr><td><span class="ui">Delete</span></td><td>Видаляє файл пресету.</td></tr>
-</table></div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/light-09-panel-presets.png" alt="Presets"></div><div class="cap">Presets: список, <b>Apply</b>, <b>Save (first frame)</b>, кошик справа.</div></div>
+<div>
+<ol class="steps"><li>Налаштуй світло.</li><li>Presets → <b>Save (first frame)</b> — вводиш імʼя; знімається стан першого кадру.</li><li>В іншій сцені чи файлі: Add Light Rig → вибрати пресет → <b>Apply</b>.</li></ol>
+<p>Папка пресетів — у Preferences аддона (<b>Light Rig presets folder</b>); порожнє поле = користувацькі пресети Blender.</p></div></div>
 
-<div class="tip">Папку пресетів можна задати в налаштуваннях аддона (поле <span class="ui">Light Rig presets folder</span>). Порожнє значення — тека пресетів Blender.</div>
+<h3>Анімація світла</h3>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/light-10-anim-frame01.jpg" alt="Кадр 1"></div><div class="cap"><span class="tag t-do">КАДР 1</span>KEY ALL на кадрі 1.</div></div>
+<div class="shot"><div class="im"><img src="img/light-10-anim-frame60.jpg" alt="Кадр 60"></div><div class="cap"><span class="tag t-res">КАДР 60</span>Інший стан, ключ на кадрі 60 — світло плавно переходить.</div></div>
+</div>
+<ol class="steps"><li>Кадр 1 → <b>KEY ALL</b>.</li><li>Кадр 60 → змінюєш лампи → <b>KEY ALL</b>.</li><li>Прокрути таймлайн: стан лампи інтерполюється між ключами.</li></ol>
+<div class="unv">Не знімав окремо: створення і налаштування слотів Spots та Points, Additional, анімація переходів у рендері «кадр за кадром» (перевірено лише кадри 1 і 60), перенесення пресета між файлами.</div>
 
-<h2 id="hud">5. HUD-інструменти</h2>
-<p>Блоки HUD працюють з бібліотекою <span class="ui">HUD_Elements.blend</span> (шлях у налаштуваннях аддона). Назви кнопок нижче взяті з коду; покрокові сценарії для кожного інструменту варто перевірити на тестовій сцені.</p>
+<h2 id="hud">4. HUD-графіка</h2>
+<p>Усі інструменти — Geometry Nodes-модифікатори з бібліотеки; додаються в позицію <b>3D-курсора</b>. Підписи рендеряться шрифтом HUD Style; кириличні і спецсимволи залежать від шрифту (мідна крапка «·» у шрифті Callout не зʼявилась — у тесті писав «-»).</p>
 
-<div class="tablewrap"><table>
-  <tr><th>Блок</th><th>Кнопки</th><th>Призначення</th></tr>
-  <tr><td><strong>HUD Callout</strong></td><td><span class="ui">Add Callout</span>, <span class="ui">Add to Selected</span>, <span class="ui">Remove</span> / <span class="ui">Refresh Cutout</span>, <span class="ui">Presets</span> (Save / Apply / Delete / Open folder), <span class="ui">Keep Start</span> / <span class="ui">Keep Text</span>, <span class="ui">Update HUD from Library</span></td><td>Виноска з бібліотеки. «Cutout / X-Ray» вирізає дірку в мешу без Boolean, щоб виноска було видно через об'єкт. Пресети зберігають вигляд виноски.</td></tr>
-  <tr><td><strong>HUD Measure</strong></td><td><span class="ui">Add Angle</span>, <span class="ui">Diameter from Selection</span>, <span class="ui">Angle from Selection</span>, <span class="ui">Outer</span>, <span class="ui">Add Handles</span></td><td>Розмірні лінії: кут і діаметр. Діаметр і кут з виділення працюють в Edit Mode. Ручки A / B / Label задають точки і текст.</td></tr>
-  <tr><td><strong>HUD Section</strong></td><td><span class="ui">Add Section</span>, <span class="ui">Add to Selected</span>, <span class="ui">Remove Section</span>, <span class="ui">Refresh Section</span></td><td>Розріз моделі з видимою відсіченою частиною (GHOST), каркасом, бордером і заливкою розрізу. Опції: Panel, Material, Real cap (mesh), Close gaps.</td></tr>
-  <tr><td><strong>HUD Style</strong></td><td><span class="ui">Add Style</span>, <span class="ui">Apply Style</span>, <span class="ui">Use Style on Selected</span></td><td>Єдиний стиль для виносок і розмірів: лінії, текст, гапи, стрілки, шрифт і матеріали.</td></tr>
-  <tr><td><strong>HUD FUI</strong></td><td><span class="ui">Add FUI Element</span>, <span class="ui">Preview All</span>, <span class="ui">Face Camera</span></td><td>Елементи інтерфейсу (Brackets, Tick Scale, Counter, Bars). Brackets обгортають виділений об'єкт.</td></tr>
-  <tr><td><strong>HUD Volume Cut</strong></td><td><span class="ui">Add Volume Cut</span>, форма (Sphere, Box, Cylinder, Custom), <span class="ui">Add to Selected</span>, <span class="ui">Refresh</span>, <span class="ui">Remove</span></td><td>Різак об'єму: пустота, яка показує внутрішню частину моделі. Має ті самі опції, що й Section.</td></tr>
-</table></div>
+<h3 id="style">HUD Style</h3>
+<div class="what"><b class="t">Що це</b>Один обʼєкт <code>HUD_Style</code> зі спільними параметрами: товщина ліній, розмір шрифту, відступи, матеріали. Усі HUD-елементи, що «підключені до стилю», змінюються разом.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/style-01-panel-empty.png" alt="Style порожня"></div><div class="cap"><span class="tag t-do">ДО</span>Лише Add Style.</div></div>
+<div class="shot"><div class="im"><img src="img/style-02-panel.png" alt="Style панель"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Add Style → параметри Line, Thin Line, Accent Line, Ring Line Scale, Font Size, Text Padding, Arrow, Dot, Pattern; Font, Line / Text / Fill Material; <b>Apply Style</b>; <b>Selected: Style / Own</b>.</div></div></div>
+<div class="shot"><div class="im"><img src="img/style-03-changed.jpg" alt="Стиль змінено"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Після зміни Line / Font Size виноска перемальована (лінія тонша, текст дрібніший) — без роботи з самим Callout.</div></div>
+<ol class="steps"><li>Додай <code>HUD_Style</code> один раз на сцену.</li><li>Зміни параметри.</li><li><b>Apply Style</b> — підключає всі HUD-елементи сцени (лічильник «Стилізованих модифікаторів»).</li><li>Для окремого елемента — <b>Own</b> (власні значення замість стилю), <b>Style</b> — назад.</li></ol>
 
-<h2 id="prod">6. Production Tools</h2>
-<figure><img src="img/production-tools.png" alt="Панель Production Tools у Blender" style="max-width:320px"><figcaption>Панель Production Tools: Proximity Alpha, Gradient Mask, Rigging, Scene Utilities.</figcaption></figure>
-<div class="tablewrap"><table>
-  <tr><th>Блок</th><th>Кнопки</th><th>Призначення</th></tr>
-  <tr><td><strong>Proximity Alpha</strong></td><td><span class="ui">Apply Proximity Alpha Setup</span></td><td>Прозорість, яка залежить від відстані до камери або об'єкта. Налаштовується на виділених мешах.</td></tr>
-  <tr><td><strong>Gradient Mask</strong></td><td><span class="ui">Create New Tool</span>, <span class="ui">Load &amp; Apply Gradient Mask</span>, <span class="ui">Surface Mode</span> / <span class="ui">Line Mode</span>, <span class="ui">Min</span> / <span class="ui">Max</span></td><td>Градієнтна маска по напрямку empty. Спершу створи інструмент (<span class="ui">Create New Tool</span>), потім завантаж маску. Режим Surface або Line.</td></tr>
-  <tr><td><strong>Rigging</strong></td><td><span class="ui">CAD Auto-Rig</span>, <span class="ui">Налаштування</span></td><td>Див. розділ 3.</td></tr>
-  <tr><td><strong>Scene Utilities</strong></td><td><span class="ui">Clear Material Slots</span>, <span class="ui">Clear Parent &amp; Delta Transform</span></td><td>Прибирає слоти матеріалів у виділених мешах або скидає батька й Delta Transform, зберігаючи положення в сцені.</td></tr>
-</table></div>
+<h3 id="callout">HUD Callout</h3>
+<div class="what"><b class="t">Що це</b>Виноска: кільце на деталі + лінія-лідер + текстова мітка. Може вирізати отвір в обʼєкті під кільцем (Cutout) або робити його «рентгеном».</div>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/callout-01-before.jpg" alt="До Add Callout"></div><div class="cap"><span class="tag t-do">ДО</span>Ручка, на яку хочемо виноску. 3D-курсор — на ручці.</div></div>
+<div class="shot"><div class="im"><img src="img/callout-02-added.jpg" alt="Add Callout"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Add Callout: зʼявились <code>Callout_01</code> (кільце) і <code>Callout_01_Label</code> (мітка) з лідером.</div></div>
+<div class="shot"><div class="im"><img src="img/callout-03-styled.jpg" alt="Стиль застосовано"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Стиль HUD_Style застосований — лінії і текст у кольорі стилю.</div></div>
+</div>
+<ol class="steps">
+<li>Постав курсор на деталь (Shift+RMB або Snap Cursor to Selected).</li>
+<li>HUD Callout → <b>Add Callout</b>.</li>
+<li>Мітку (<code>…_Label</code>) перетягни туди, де має стояти текст. Текст — у модифікаторі <b>Callout Label → Text</b>.</li>
+<li><b>Align to Camera</b>: розвернути кільце до камери.</li>
+<li><b>Cutout</b> (за потреби) → <b>Add to Selected</b> на деталях, які треба прорізати.</li></ol>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/callout-04-aligned.jpg" alt="Align to Camera"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Align to Camera — кільце повернулось площиною до камери.</div></div>
+<div class="shot"><div class="im"><img src="img/callout-05-leader.jpg" alt="Лідер"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Лідер: тип Elbow, пунктир, кінцева крапка (параметри — модифікатор мітки).</div></div>
+<div class="shot"><div class="im"><img src="img/callout-06-cutout.jpg" alt="Cutout"></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Cutout: у корпусі й ручці прорізаний круглий отвір під кільцем, всередині — напівпрозоре «скло» (Ghost).</div></div>
+</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/callout-07-panel.png" alt="Панель Callout"></div><div class="cap">Панель HUD Callout.</div></div>
+<div>
+<table><tr><th>Параметр</th><th>Що робить</th></tr>
+<tr><td>Align to Camera</td><td>Тримає кільце лицем до камери сцени.</td></tr>
+<tr><td>Cutout</td><td>Вмикає прорізання матеріалів під кільцем.</td></tr>
+<tr><td>Margin mm</td><td>Запас отвору навколо кільця.</td></tr>
+<tr><td>Depth mm</td><td>Глибина прорізання (у тесті підставилась автоматично: 44.98 мм).</td></tr>
+<tr><td>Hole Opacity</td><td>Непрозорість «дна» отвору (у тесті 0).</td></tr>
+<tr><td>Ghost</td><td>Видимість напівпрозорого «скла» на місці прорізаного (у тесті 1.0).</td></tr>
+<tr><td>Add to Selected</td><td>Підключає виділені деталі до отвору (змінює матеріали на копії); ✕ — прибирає; ↻ — оновлює. Рядок знизу показує кількість прорізаних матеріалів.</td></tr>
+<tr><td>Presets</td><td>Список, Apply / Save, 📁 — відкрити папку. <b>Keep Start</b> зберігає Start Frame, <b>Keep Text</b> — текст мітки.</td></tr>
+<tr><td>Update HUD from Library</td><td>Оновлює node-групи HUD з бібліотеки (після змін у шаблонах).</td></tr></table></div></div>
 
-<h2 id="passes">7. Render Passes — рендер по шарах</h2>
-<p>Окремий аддон (<span class="ui">rost_render_passes</span>), який тепер теж у вкладці Rost Tools. Рендерить view layers окремими проходами: основна сцена з DoF, виноски без DoF і з альфою. Потім шари збираються в DaVinci Resolve або Fusion.</p>
-<div class="step"><div class="n">1</div><div>Для кожного пасу вибери view layer, DoF, альфу, денойз, рушій, семпли і шлях (токени <span class="ui">{scene}</span>, <span class="ui">{layer}</span>, <span class="ui">{blend}</span>).</div></div>
-<div class="step"><div class="n">2</div><div>Пресет якості: Workbench, Light, Medium або Production. Галочка <span class="ui">All scenes</span> застосовує його до всіх сцен.</div></div>
-<div class="step"><div class="n">3</div><div><span class="ui">To All Scenes</span> копіює список пасів поточної сцени в усі інші.</div></div>
-<div class="step"><div class="n">4</div><div><span class="ui">RENDER ANIMATION</span> рендерить усі паси по черзі. <span class="ui">Render Frame N</span> рендерить один кадр і перезаписує файл з тим самим номером.</div></div>
+<h4>Шари кільця (Properties → Modifiers)</h4>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/callout-08-modifiers.png" alt="Модифікатори"></div><div class="cap">Модифікатор Ring · Band: Type, Radius, Width, Thickness, Arc Length, Start Angle; Motion: Rotation Speed, Pulse.</div></div>
+<div><p>Callout складається з кількох GN-шарів кільця (<code>GN_HUD_RingLayer</code>): Band, Line, Ticks… Кожен — окремий модифікатор з типом, радіусом, товщиною, дугою і рухом. Тут же — Start Frame / Duration / Use Out для анімації появи і зникання.</p></div></div>
 
-<h2 id="trouble">8. Типові проблеми</h2>
-<div class="tablewrap"><table>
-  <tr><th>Симптом</th><th>Що зробити</th></tr>
-  <tr><td>Панель дублюється або не з'являється після оновлення аддона</td><td>Перезапусти Blender. Старі класи панелей лишаються в пам'яті до перезапуску.</td></tr>
-  <tr><td>Риг не будується (помилка про модуль)</td><td>Перевір <span class="ui">addon_module</span> у <span class="ui">rig_rules.json</span> — має бути <span class="ui">rost_production_tools_13</span>, і аддон увімкнений.</td></tr>
-  <tr><td>Розгорнуті панелі після перезапуску</td><td>Панелі мають стан <span class="ui">DEFAULT_CLOSED</span>. Якщо вони відкриті, затисни Ctrl і клікни на заголовок — згорнеться все інше.</td></tr>
-  <tr><td>Деталь має магентовий матеріал</td><td>Додай правило в <span class="ui">material_rules.json</span> і натисни <span class="ui">Materials only</span>.</td></tr>
-  <tr><td>Пресет світла «з'їхав» на іншій моделі</td><td>Використай <span class="ui">Fit to model size</span> або перезбери пресет з потрібної моделі.</td></tr>
-</table></div>
+<h4>Пресети</h4>
+<div class="shot"><div class="im"><img src="img/callout-09-preset.jpg" alt="Пресети">
+<span class="mk" style="left:32%;top:10.5%">1</span><span class="mk" style="left:44%;top:26%">2</span><span class="mk" style="left:62.5%;top:68%">3</span><span class="mk" style="left:50%;top:85%">4</span></div>
+<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span><b>1–2</b> — нова виноска <code>Callout_02</code> на куполі після Apply пресета <code>Guide_Ticks</code>: у ній третій шар кільця перетворений з Line на Ticks (риски). <b>3–4</b> — Callout_01 з ручкою.</div></div>
+<ol class="steps"><li>Налаштуй виноску, <b>Save</b> → імʼя пресета.</li><li>Виділи іншу виноску (у полі <b>Callout</b>), у списку вибери пресет → <b>Apply</b>.</li></ol>
+<div class="note">Пресети пишуться в <code>…\HUD\Callout_Presets</code> поруч із бібліотекою. У тесті я підставив тимчасову папку, щоб не засмічувати твою бібліотеку.</div>
+<div class="unv">Кнопка 📁 (відкрити папку), видалення пресета, Update HUD from Library, ✕ / ↻ біля Add to Selected на кількох обʼєктах — не запускалися.</div>
+<h3 id="measure">HUD Measure</h3>
+<div class="what"><b class="t">Що це</b>Розмірні виноски: кут між двома ребрами/осями (Angle) і діаметр отвору чи торця (Diameter). Значення рахується автоматично і виводиться підписом за шаблоном <code>{v}</code> (кут) або <code>Ø {v}{u}</code> (діаметр).</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/measure-02-panel.png" alt="Панель Measure"></div><div class="cap">HUD Measure з активним Angle: параметри кута, заливка сектора, Face Camera, Add Handles.</div></div>
+<div>
+<table><tr><th>Кнопка</th><th>Що робить</th></tr>
+<tr><td>Add Angle</td><td>Object Mode: ставить кут у 3D-курсор (вісь Z курсора = вісь кута) і створює ручки <code>Angle_01_A</code>, <code>_B</code>, <code>_Label</code>.</td></tr>
+<tr><td>Diameter from Selection</td><td>Edit Mode: по виділеному колу/кільцю вершин створює діаметр.</td></tr>
+<tr><td>Angle from Selection, Outer</td><td>Edit Mode: кут по виділених ребрах; Outer — зовнішній (360° − кут).</td></tr></table>
+<div class="warn">Значення <b>Angle</b> у панелі — лише стартове (30°). Реальний кут бере з положення ручок A і B.</div></div></div>
 
-<div class="warn"><strong>Ще не перевірено:</strong> корекція замка (поворот корпусу, коли язичок іде вниз) на свіжому імпорті STEP; значення ходу газліфта береться з правил, а не з datasheet; збереження <span class="ui">.blend</span> за назвою STEP і пакетний рендер поки не в панелі.</div>
+<h4>Angle: кут відкриття кришки</h4>
+<ol class="steps">
+<li>Постав курсор на вісь шарніра, розверни так, щоб його Z збігався з віссю обертання (для кришки — вздовж осі X).</li>
+<li>HUD Measure → <b>Add Angle</b>.</li>
+<li>Ручку <code>_A</code> піднеси на нерухому деталь (корпус), ручку <code>_B</code> — на рухому (кришку), <code>_Label</code> — куди ставити підпис. Ручки батькуй до своїх деталей, щоб кут жив під час анімації.</li>
+<li>Увімкни <b>Face Camera</b>, щоб текст не був дзеркальним; підніми <b>Ray Length</b> і <b>Arc Radius</b> під масштаб.</li></ol>
+<div class="shot"><div class="im"><img src="img/measure-01-angle.jpg" alt="Кут кришки">
+<span class="mk" style="left:47%;top:32%">1</span><span class="mk" style="left:51.5%;top:41.7%">2</span><span class="mk" style="left:44%;top:58%">3</span><span class="mk" style="left:59%;top:46%">4</span></div>
+<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Кришка відкрита на 55°. <b>1</b> — підпис (55.0°), <b>2</b> — дуга зі стрілками, <b>3</b> — промінь A по корпусу, <b>4</b> — рухома кришка (ручка B).</div></div>
 
-</body>
-</html>
+<h4>Diameter: торець ручки</h4>
+<ol class="steps">
+<li>Edit Mode на меші ручки; виділи крайовий ring торця (колове коло вершин).</li>
+<li><b>Diameter from Selection</b>. Елемент <code>Diameter_01</code> зʼявляється в центрі кола на торці; повернення в Object Mode відбувається саме.</li>
+<li>У параметрах постав <b>Face Camera</b> і розмір шрифту; <b>Leader Length</b> і <b>Angle</b> керують положенням підпису.</li></ol>
+<div class="shot"><div class="im"><img src="img/measure-03-diameter.jpg" alt="Діаметр ручки"><span class="mk" style="left:56%;top:62%">1</span></div>
+<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span><b>1</b> — Ø 100.0 mm: діаметр ручки (радіус 50 мм) підписаний автоматично, діаметральна лінія зі стрілками.</div></div>
+<div class="bug">HUD лежить у площині виділеного кола. Якщо сусідня поверхня виступає далі (корпус перед торцем ручки), підпис, що виходить за коло, ховається за нею: на першому рендері було видно лише «Ø 10». Підніми <code>Diameter_N</code> по нормалі на кілька мм перед камерою.</div>
+<div class="bug">Ручка <b>Label</b> діаметра (<code>Diameter_01_Label</code>, Add Handles) у тесті не змінила положення підпису — залишилась на дефолтній позиції. Керуй підписом через Leader Length / Angle.</div>
+<div class="unv">Angle from Selection і Outer (Edit Mode) не запускалися. Ruler/Dimension із Asset Browser теж не тестувалися. Add Handles для вже створеного Angle — спрацьовує автоматично при Add Angle.</div>
+
+<h3 id="section">HUD Section</h3>
+<div class="what"><b class="t">Що це</b>Площина розрізу: відсікає частину моделі, лишаючи внутрішній переріз із заливкою (штриховка), контуром і «примарою» відсіченого. Працює через матеріали деталей і додатковий каркас.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/section-03-panel.png" alt="Панель Section"></div><div class="cap">Панель HUD Section: Enable, Flip Side, Frame Opacity, чотири групи, Add to Selected.</div></div>
+<div>
+<ol class="steps">
+<li>Курсор у точку розрізу → <b>Add Section</b>. Зʼявляється площина-рамка <code>Section</code> (площина розрізу = її локальний XY).</li>
+<li>Виділи деталі, потім <b>Section</b> (останнім, активним) → <b>Add to Selected</b>. Лічильник: «Матеріалів: 3 · Каркасів: 4».</li>
+<li>Поверни/посунь площину; <b>Flip Side</b> змінює, яку частину лишити.</li>
+<li>Прибрати: ✕ (Remove Section) — від виділених деталей, а без виділення — від усіх; ↻ перебудовує драйвери і ставить каркас останнім у стеку.</li></ol></div></div>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/section-01-default.jpg" alt="Розріз"><span class="mk" style="left:50%;top:53%">1</span><span class="mk" style="left:69%;top:58%">2</span><span class="mk" style="left:42%;top:17%">3</span></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Площина повернута на 90° по X і зсунута; <b>1</b> — заливка розрізу (штриховка), <b>2</b> — зберігся корпус за площиною, <b>3</b> — переріз купола.</div></div>
+<div class="shot"><div class="im"><img src="img/section-02-flip.jpg" alt="Flip Side"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Flip Side: лишилась протилежна половина; відсічена частина видна лише тонким контуром (Ghost).</div></div>
+</div>
+<table><tr><th>Група</th><th>Параметри</th></tr>
+<tr><td>GHOST</td><td>Rim (контур), Rim Strength, Body (матеріал), Color, Opacity, Roughness, Transmission, IOR, Keep Part Material; перемикач Panel / Material — свій матеріал.</td></tr>
+<tr><td>GHOST WIRE</td><td>Opacity, Thickness (mm), Edge Angle; Color / Strength або свій матеріал.</td></tr>
+<tr><td>CUT EDGE</td><td>Width (mm), Blur (mm); Color / Strength.</td></tr>
+<tr><td>CUT FILL</td><td>Real cap (mesh) і Close gaps — реальна кришка з геометрії; Mix Part Material, Strength, Color A/B, Stripes, Stripe Width, Stripe Angle.</td></tr></table>
+<div class="note">Усі четири групи в панелі — згорнуті секції; відкривай їх по клику. Дефолт добре читається, чіпай, коли потрібен інший колір або товщина штрихів.</div>
+<div class="unv">Параметри GHOST / GHOST WIRE / CUT EDGE / CUT FILL описані за кодом панелі, в роботі я їх не міняв. Real cap і Close gaps не запускались. Розріз перевірений на цільних (замкнених) мешах — з відкритими сітками результат не перевірявся.</div>
+
+<h3 id="volcut">HUD Volume Cut</h3>
+<div class="what"><b class="t">Що це</b>Той самий розріз, але обʼємним різаком: сфера, куб, циліндр або власний замкнений меш. Лишає/відсікає частину моделі всередині різака.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/volcut-03-panel.png" alt="Панель Volume Cut"></div><div class="cap">Sphere / Box / Cylinder / Custom, Radius, Enable, Cut Outside, ті самі групи.</div></div>
+<div>
+<ol class="steps">
+<li>Курсор в центр різака. Кнопка форми: <b>Sphere</b>, <b>Box</b>, <b>Cylinder</b> або іконка Custom (спершу зроби активним закритий меш-різак).</li>
+<li>Радіус / розміри — у параметрах; різак можна рухати як звичайний обʼєкт.</li>
+<li>Різак активний + деталі виділені → <b>Add to Selected</b>.</li>
+<li><b>Cut Outside (keep inside)</b> — міняє: вирізати всередині чи лишити тільки те, що в різаку.</li></ol></div></div>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/volcut-01-sphere.jpg" alt="Сфера вирізає"><span class="mk" style="left:53%;top:58%">1</span></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Сфера R=130 мм біля нижнього кута: <b>1</b> — штрихована «кулька» перерізу на місці зрізаного.</div></div>
+<div class="shot"><div class="im"><img src="img/volcut-02-outside.jpg" alt="Cut Outside"></div><div class="cap"><span class="tag t-act">ДІЯ</span>Cut Outside: залишився лише фрагмент усередині сфери, решта прихована.</div></div>
+</div>
+<div class="note">Штриховка заливки на дрібному кроці при русі/стиску дає муар. Збільш <b>Stripe Width</b> у CUT FILL.</div>
+<div class="unv">Box, Cylinder і Custom не запускались; Real cap / Close gaps також.</div>
+
+<h3 id="fui">HUD FUI</h3>
+<div class="what"><b class="t">Що це</b>Декоративні елементи інтерфейсу: шкала з рисками, кутові дужки, лічильник, бари/слайдери.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/fui-02-panel.png" alt="Панель FUI"></div><div class="cap">HUD FUI: Preview All, чотири типи, Face Camera.</div></div>
+<div>
+<table><tr><th>Кнопка</th><th>Що робить</th></tr>
+<tr><td>Tick Scale</td><td>Шкала з рисками і числами та покажчиком (дуга/лінія).</td></tr>
+<tr><td>Brackets</td><td>Кутові дужки або рамка. Виділений меш → дужки обгортають його (Fit To).</td></tr>
+<tr><td>Counter</td><td>Лічильник чисел з Prefix / Suffix, режимом, кількістю цифр.</td></tr>
+<tr><td>Bars / Sliders</td><td>Bar, Segments, Equalizer, Slider.</td></tr>
+<tr><td>Preview All: On / Off</td><td>Показати всі HUD-елементи повністю (Preview Full) або повернути анімацію.</td></tr>
+<tr><td>Face Camera / ✕</td><td>Constraint Copy Rotation до камери сцени на виділених; ✕ — прибрати.</td></tr></table></div></div>
+<div class="shot"><div class="im"><img src="img/fui-01-all.jpg" alt="Усі FUI">
+<span class="mk" style="left:20%;top:55%">1</span><span class="mk" style="left:36%;top:37%">2</span><span class="mk" style="left:82%;top:41%">3</span><span class="mk" style="left:79%;top:69%">4</span></div>
+<div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Усі чотири елементи, Preview All On + Face Camera. <b>1</b> — Tick Scale (0–100), <b>2</b> — Brackets, <b>3</b> — Counter (100%), <b>4</b> — Bars (сегменти).</div></div>
+<div class="warn">Brackets ставляться в точку півоту виділеного обʼєкта, а не в його центр габариту. Якщо півот знизу (як у тесті, на землі) — дужки виходять нижче моделі; підніми <code>Brackets</code> по Z або постав півот у центр. Розмір дужок береться з обʼєкта + <b>Fit Margin</b>.</div>
+<div class="note">Типовий розмір Tick Scale / Counter / Bars невеликий (десятки мм). У метровій сцені їх треба масштабувати (у тесті ×2.2 / ×5 / ×3) або піднімати параметри в модифікаторі.</div>
+<div class="unv">Не перевірено: Brackets Style «рамка», Show Fill / Center Marks, режими Counter (From/To/Value), типи Bars (Equalizer, Slider).</div>
+<h2 id="tools">5. Production Tools</h2>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/tools-01-panel.png" alt="Production Tools"></div><div class="cap">Панель: Proximity Alpha, Gradient Mask, Rigging (див. розділ 2), Scene Utilities. Іконка «?» у заголовку — цей гайд.</div></div>
+<div class="what"><b class="t">Що це</b>Дрібні утиліти для сцен: прозорість за відстанню до обʼєкта, анімована градієнтна маска і дві утиліти для підготовки сцени.</div></div>
+
+<h3 id="prox">Proximity Alpha</h3>
+<div class="what"><b class="t">Що це</b>Деталь стає прозорою поблизу вибраного обʼєкта (або, навпаки, з відстанню): GN-модифікатор пише відстань в атрибут <code>mask_dist</code>, шейдер-група <code>M_Proximity_Alpha</code> перетворює її в Alpha матеріалу.</div>
+<ol class="steps">
+<li>Виділи меш(і) → <b>Apply Proximity Alpha Setup</b>. Додається модифікатор <code>GN_Proximity_Mask</code> і група в матеріалах (її вихід вмикається у Alpha Principled).</li>
+<li>У модифікаторі в полі <b>Object</b> вкажи обʼєкт, до якого міряється відстань (ручка, емпті).</li>
+<li>Підлаштуй Color Ramp усередині групи <code>M_Proximity_Alpha</code> (Edit group, Tab).</li></ol>
+<div class="shot"><div class="im"><img src="img/prox-01.jpg" alt="Proximity Alpha"><span class="mk" style="left:60%;top:82%">1</span></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Корпус розчиняється навколо ручки (<b>1</b>) — шум додає зернистість краю. Ramp виставлений 0.04 → 0.30 (одиниць сцени).</div></div>
+<div class="bug">Типові межі Color Ramp — 0.51 і 0.895 одиниць сцени. У метровій сцені все ближче 0.5 м до обʼєкта стає <b>повністю</b> прозорим (на першому рендері тест-корпус зник цілком). Підганяй позиції ramp під розмір сцени.</div>
+<div class="bug">Кнопки «прибрати» немає: видаляй модифікатор <code>GN_Proximity_Mask</code> і вузол-групу в матеріалі вручну. Матеріал має Blend = Dithered — зернистість видна на низьких семплах.</div>
+
+<h3 id="grad">Gradient Mask</h3>
+<div class="what"><b class="t">Що це</b>Анімована градієнтна маска за положенням Empty. У <b>Line Mode</b> рендер перетворюється на «лінійну» подачу: видима лише смуга моделі на межі градієнта (альфа через композитор), світло вимкнене, фон світу 0. <b>Surface Mode</b> — звичайний рендер.</div>
+<ol class="steps">
+<li><b>Create New Tool</b> — копія групи <code>LineSurface switcher</code> і Empty <code>Gradient_Direction</code> (незалежний ефект; для другого ефекту кнопку тисни ще раз).</li>
+<li>Виділи меші → <b>Load &amp; Apply Gradient Mask</b>. Матеріали копіюються (<code>.001</code>) і отримують вузол маски; параметри зʼявляються на Empty як custom properties (<b>Line Border Size</b>, <b>Border Noise</b>) і дублюються в панелі.</li>
+<li>Натисни <b>Surface Mode</b> або <b>Line Mode</b>: тільки це підключає композитор. Без цього рендер після Apply виходить чорним.</li>
+<li>Рухай <code>Gradient_Direction</code> (позиція / поворот / масштаб) — по ньому проходить смуга. Анімуй Empty ключами.</li>
+<li><b>🗑 Remove Mask</b> — прибирає маску з виділених (повертає Surface Mode).</li></ol>
+<div class="row">
+<div class="shot"><div class="im"><img src="img/grad-01-surface.jpg" alt="Surface Mode"></div><div class="cap"><span class="tag t-do">Surface</span>Звичайний рендер, маска підключена.</div></div>
+<div class="shot"><div class="im"><img src="img/grad-02-line-a.jpg" alt="Line, Z=0.08"></div><div class="cap"><span class="tag t-act">Line · Z 0.08</span>Empty низько — лише нижня смуга.</div></div>
+<div class="shot"><div class="im"><img src="img/grad-02-line-b.jpg" alt="Line, Z=0.25"></div><div class="cap"><span class="tag t-act">Line · Z 0.25</span>Смуга піднялась разом з Empty (ширина — Line Border Size 0.04).</div></div>
+<div class="shot"><div class="im"><img src="img/grad-02-line-c.jpg" alt="Line, Z=0.45"></div><div class="cap"><span class="tag t-res">Line · Z 0.45</span>Empty на верхній грані — смуга майже зникла.</div></div>
+</div>
+<div class="warn">У Line Mode рендер — прозорий RGBA без світла; на зображеннях вище для наочності він накладений на темний фон. Композитор перемикається під сцену: у сцені, де вже є свій Compositor, Line/Surface Mode переписує звʼязки Group Output.</div>
+<div class="unv">Не знімав: поворот і масштаб Empty (лише позиція), Border Noise, анімацію через ключі.</div>
+
+<h3 id="util">Scene Utilities</h3>
+<table><tr><th>Кнопка</th><th>Що робить</th><th>Перевірено</th></tr>
+<tr><td>Clear Material Slots</td><td>Видаляє всі слоти матеріалів у виділених мешах.</td><td>Куб із 2 слотами → 0 слотів.</td></tr>
+<tr><td>Clear Parent &amp; Delta Transform</td><td>Знімає батька з поточним положенням у світі (Keep Transform), потім переносить усі трансформації в Delta Transform (локальні Location/Rotation/Scale стають 0/0/1).</td><td>Дочірній куб: батько знято, світове положення (0.5, 0.5, 0.15) збережене, Location = 0, Delta Location = (0.5, 0.5, 0.15).</td></tr></table>
+<div class="note">Delta-трансформації видно лише у Properties → Object → Transform → Delta. Для анімації / констрейнтів вони поводяться як звичайні — але нова <b>Location</b> тепер додається до дельти.</div>
+
+<h2 id="rp">6. Render Passes</h2>
+<div class="what"><b class="t">Що це</b>Окремий аддон <code>rost_render_passes</code> (панель у тій же вкладці Rost Tools): рендерить список view layers по черзі як «паси», кожен з власними DoF, Alpha, Denoise, рушієм, семплами і шляхом; плюс пресети якості.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/rp-01-panel.png" alt="Render Passes"></div><div class="cap">Render Passes: Quality, список пасів (два: <code>main_scene</code> — DoF on, <code>callout</code> — DoF off, Alpha, Cycles 64), Add Pass / To All Scenes, RENDER ANIMATION, Render Frame.</div></div>
+<div>
+<ol class="steps">
+<li>Створи view layers (наприклад <code>main_scene</code>, <code>callout</code>).</li>
+<li><b>Add Pass</b>, у полі вибери view layer. Переставляй стрілками, ✕ — видалити, галочка — вмикає/вимикає пас.</li>
+<li>Для кожного паса: <b>DoF on/off</b> (off — на час паса DoF камер вимикається), <b>Alpha</b> (прозорий фон + RGBA), <b>Denoise</b>, рушій (As scene / Cycles / EEVEE), <b>Samples</b> (0 = зі сцени), шлях з токенами <code>{scene} {layer} {blend}</code>.</li>
+<li><b>RENDER ANIMATION</b> або <b>Render Frame N</b>.</li>
+<li>Під час рендеру кнопка стає «Stop Queue and Restore» — вертає view layers, DoF, шлях, рушій, семпли, denoise.</li></ol></div></div>
+<h4>Пресети якості</h4>
+<table><tr><th>Пресет</th><th>Рушій</th><th>%</th><th>Семпли</th></tr>
+<tr><td>Workbench</td><td>Workbench</td><td>100</td><td>—</td></tr>
+<tr><td>Light</td><td>Cycles</td><td>50</td><td>64</td></tr>
+<tr><td>Medium</td><td>Cycles</td><td>100</td><td>64</td></tr>
+<tr><td>Production</td><td>Cycles</td><td>200</td><td>512</td></tr></table>
+<p>Галочка <b>All scenes</b> — застосувати пресет до всіх сцен файлу. Базова роздільність не змінюється (лише %); під кнопками видно поточний розмір.</p>
+<div class="note">Шлях червоний, бо рядок з токенами (<code>//renders/{scene}/{layer}/{layer}_</code>) літерально не існує на диску — це не помилка.</div>
+<div class="note">Пас з Alpha вмикає прозорий фон лише на час паса; після рендеру film transparent повертається.</div>
+<div class="note"><b>To All Scenes</b> копіює список пасів поточної сцени в усі інші і <b>замінює</b> їхні списки.</div>
+<div class="warn">Render Animation за замовчуванням (EXEC) запускає всю анімацію: у тесті пас <code>main_scene</code> рендерив кадри з частотою ~2 кадри/с, поки я не натиснув «Stop Queue and Restore». Після зупинки view layers, DoF і рушій повернулись, у статусі — «Stopped».</div>
+<div class="unv">Не перевірено: Render Frame N (файл перезаписує кадр анімації з тим самим номером), повний цикл двох пасів до кінця, скасування по Esc посередині анімації, перекриття виносок (holdout) — налаштовується вручну у view layers.</div>
+
+<h2 id="faq">7. Типові проблеми</h2>
+<table><tr><th>Симптом</th><th>Причина і що робити</th></tr>
+<tr><td>HUD-елемент зʼявився, але порожній</td><td>Кадр = Start Frame. Перейди на кадр після нього або ввімкни Preview Full / Preview All.</td></tr>
+<tr><td>Підпис дзеркальний</td><td>Увімкни Face Camera (або Mirror Text X/Y/Z).</td></tr>
+<tr><td>Текст виходить за межі і обрізається</td><td>Сусідня поверхня ближче до камери за площину HUD (Measure Diameter). Підніми обʼєкт по нормалі.</td></tr>
+<tr><td>Підпис Angle показує не те, що в панелі</td><td>Значення Angle у панелі — стартове; кут задають ручки A/B.</td></tr>
+<tr><td>Рендер чорний після Load &amp; Apply Gradient Mask</td><td>Не натиснуто Surface/Line Mode — композитор не підключений.</td></tr>
+<tr><td>Proximity Alpha: усе прозоре / нічого не видно</td><td>Не вказано Object у модифікаторі або Color Ramp не під масштаб сцени.</td></tr>
+<tr><td>Brackets «втекли» під модель</td><td>Півот обʼєкта не в центрі: підніми Brackets по Z.</td></tr>
+<tr><td>Кнопки Add HUD пишуть «Не знайдено бібліотеку»</td><td>Перевір <b>HUD Library</b> у Preferences аддона.</td></tr>
+<tr><td>STEP Pipeline: «Звіт» падає (KeyError Lmax_mm)</td><td>Стара версія аддона. Постав версію з репозиторію.</td></tr>
+<tr><td>Нова арматура називається Armature.001</td><td>У файлі вже є Armature. Перейменуй старий обʼєкт.</td></tr>
+<tr><td>Символ «·» не відображається в Callout</td><td>Глиф відсутній у шрифті HUD; використовуй «-» або свій шрифт у HUD Style → Font.</td></tr>
+<tr><td>Кнопка Run не працює / скрипт не знайдено</td><td>STEP Pipeline очікує <code>…\AssetsLibrary\EXM_Pipeline</code> і аддон CADder; без них панель порожня.</td></tr></table>
+
+<h2 id="unv">Що не вдалося перевірити</h2>
+<ul>
+<li>STEP Pipeline на інших файлах, Materials only / Rig only окремо.</li>
+<li>CAD Auto-Rig на реальній моделі (тест — синтетична збірка).</li>
+<li>Light Rig: Additional / Spots / Points у роботі; перенесення пресета між файлами.</li>
+<li>HUD Measure: Angle from Selection, Outer, Ruler/Dimension.</li>
+<li>HUD Section / Volume Cut: Real cap, Close gaps, група параметрів Ghost/Wire/Edge/Fill; Box, Cylinder, Custom.</li>
+<li>HUD FUI: режими Counter, типи Bars, Brackets Frame, Show Fill.</li>
+<li>Render Passes: Render Frame N, повний прохід двох пасів, Esc.</li></ul>
+
+<p style="margin-top:40px;color:var(--mute)">Rost Production Tools 4.0 · Blender 5.2 · гайд зібраний на тестовій сцені 16.11.2026.</p>
+</main>
+</div>
+<script>
+(function(){
+var toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach(function(h){
+ if(!h.id){h.id='h'+Math.random().toString(36).slice(2,7);}
+ var a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.className='s2';toc.appendChild(a);});
+var b=document.createElement('button');b.className='tg';b.textContent='Тема: авто';
+var modes=['auto','dark','light'],i=0;
+b.onclick=function(){i=(i+1)%3;document.documentElement.setAttribute('data-theme',modes[i]);b.textContent='Тема: '+['авто','темна','світла'][i];};
+toc.appendChild(b);
+})();
+</script>
+</body></html>
