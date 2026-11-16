@@ -1037,6 +1037,9 @@ class OBJECT_OT_CadAutoRig(bpy.types.Operator):
 # ==============================================================================
 # ПАНЕЛЬ У VIEWPORT (N-PANEL)
 # ==============================================================================
+GUIDE_URL = "https://rosttka.github.io/rost-production-tools/guide.html"
+
+
 class OBJECT_PT_RossToolsPanel(bpy.types.Panel):
     bl_options = {'DEFAULT_CLOSED'}
     bl_label = "Production Tools"
@@ -1044,6 +1047,10 @@ class OBJECT_PT_RossToolsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Rost Tools'
+
+    def draw_header(self, context):
+        op = self.layout.operator("wm.url_open", text="", icon='HELP', emboss=False)
+        op.url = GUIDE_URL
 
     def draw(self, context):
         layout = self.layout
