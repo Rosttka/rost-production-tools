@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rost Production Tools 4.1 — гайд</title>
+<title>Rost Production Tools 4.4 — гайд</title>
 <style>
 :root{--bg:#f6f7f9;--panel:#ffffff;--ink:#1c2128;--mute:#5b6572;--line:#d9dee5;--accent:#0b7fb5;--accent2:#e07b1a;--code:#eef1f5;--shot:#14171c;--warn:#fff4e0;--warnline:#e9b45f;--ok:#e6f5ec;--okline:#5bb381;--bad:#fdeaea;--badline:#e08a8a}
 html[data-theme=dark]{--bg:#0f1216;--panel:#171b21;--ink:#e6e9ee;--mute:#9aa4b0;--line:#2a313a;--accent:#4cb8ea;--accent2:#f09a46;--code:#1f252d;--shot:#0a0c0f;--warn:#2b2210;--warnline:#8a6a2a;--ok:#12261b;--okline:#2f7a52;--bad:#2c1515;--badline:#8a3a3a}
@@ -64,14 +64,16 @@ td:first-child{white-space:nowrap}
 </head>
 <body>
 <div class="wrap">
-<nav id="toc"><b>Rost Production Tools 4.1</b></nav>
+<nav id="toc"><b>Rost Production Tools 4.4</b></nav>
 <main>
-<h1>Rost Production Tools 4.1 — гайд</h1>
-<p class="lead">Аддон для Blender 5.2: STEP-конвеєр, авториг, світло, HUD-графіка, пас-рендер. Усе нижче запущено на тестовій сцені (помаранчевий пристрій з ручкою, куполом і панеллю); що не вдалося перевірити — позначено <b>«Не перевірено»</b>.</p>
+<h1>Rost Production Tools 4.4 — гайд</h1>
+<p class="lead">Аддон для Blender 5.2: STEP-конвеєр, авториг, світло, HUD-графіка, пас-рендер, Reveal Passes. Усе нижче запущено на тестовій сцені (помаранчевий пристрій з ручкою, куполом і панеллю); що не вдалося перевірити — позначено <b>«Не перевірено»</b>.</p>
 
 <div class="what"><b class="t">Встановлення</b>
-Файл <code>rost_production_tools.py</code> покласти в <code>%APPDATA%\Blender Foundation\Blender\5.2\scripts\addons\</code>, увімкнути в Preferences → Add-ons. Панелі — N-панель 3D-вʼюпорта, вкладка <b>Rost Tools</b>. Кнопка <b>«?»</b> у заголовку Production Tools відкриває цей гайд.<br>
-Порядок панелей: Render Passes · Production Tools · HUD Callout · HUD Measure · HUD Section · HUD Volume Cut · HUD Style · HUD FUI · Rost Light Rig · STEP Pipeline. Усі згорнуті за замовчуванням.</div>
+Аддон — пакет <code>rost_production_tools_4.4.0.zip</code> (модулі + папка <code>library/</code> з бібліотеками HUD, світла, Reveal). Blender → Preferences → Add-ons → Install from Disk → вибрати zip → увімкнути. Панелі — N-панель 3D-вʼюпорта, вкладка <b>Rost Tools</b>. Кнопка <b>«?»</b> у заголовку Production Tools відкриває цей гайд.<br>
+У Preferences аддона є шляхи: <b>HUD Library</b> (за замовчуванням — <code>library/</code> всередині пакета), <b>Preset Folder</b> (власні пресети Section / Volume Cut / Callout; стандартна тека — <code>scripts/presets/rost_hud_*</code> у профілі Blender), <b>Pipeline Folder</b> (скрипти STEP Pipeline).<br>
+Порядок панелей: Render Passes · Reveal Passes · Production Tools · HUD Callout · HUD Measure · HUD Section · HUD Volume Cut · HUD Style · HUD FUI · Rost Light Rig · STEP Pipeline. Усі згорнуті за замовчуванням. Рушій для всіх інструментів — <b>Cycles</b>.</div>
+<div class="note"><b>Library Override.</b> Якщо матеріали прийшли з лінкованої бібліотеки (Library Override), HUD-інструменти локалізують їх у копії <code>.local</code>; кнопка <b>Sync Local Materials</b> (Production Tools) оновлює такі копії після змін в оригіналі.</div>
 
 <div class="note">HUD-інструменти беруть шаблони з бібліотеки <code>HUD_Elements.blend</code> (шлях — у Preferences аддона, поле <b>HUD Library</b>; поруч папки <code>Callout_Presets</code>, файли <code>HUD_FUI.blend</code> та ін.). Без цих файлів кнопки Add повертають помилку «Не знайдено бібліотеку».</div>
 <div class="note">Усі HUD-елементи анімовані: <b>Start Frame</b> ставиться на кадр, на якому ти натиснув Add. На самому стартовому кадрі елемент ще порожній — переглядай на кадрах після нього або вмикай <b>Preview Full</b> / <b>Preview All</b>.</div>
@@ -313,12 +315,13 @@ td:first-child{white-space:nowrap}
 <h3 id="section">HUD Section</h3>
 <div class="what"><b class="t">Що це</b>Площина розрізу: відсікає частину моделі, лишаючи внутрішній переріз із заливкою (штриховка), контуром і «примарою» відсіченого. Працює через матеріали деталей і додатковий каркас.</div>
 <div class="split">
-<div class="shot"><div class="im"><img src="img/section-03-panel.png" alt="Панель Section"></div><div class="cap">Панель HUD Section: Enable, Flip Side, Frame Opacity, чотири групи, Add to Selected.</div></div>
+<div class="shot"><div class="im"><img src="img/section-03-panel.png" alt="Панель Section"></div><div class="cap">Панель HUD Section: рядок пресетів (збереження, видалення, тека), Enable, Flip Side, Frame Opacity, чотири групи, Add to Selected.</div></div>
 <div>
 <ol class="steps">
 <li>Курсор у точку розрізу → <b>Add Section</b>. Зʼявляється площина-рамка <code>Section</code> (площина розрізу = її локальний XY).</li>
 <li>Виділи деталі, потім <b>Section</b> (останнім, активним) → <b>Add to Selected</b>. Лічильник: «Матеріалів: 3 · Каркасів: 4».</li>
 <li>Поверни/посунь площину; <b>Flip Side</b> змінює, яку частину лишити.</li>
+<li><b>Пресети</b>: випадний список зверху вибирає набір параметрів, ⤓ — зберегти поточний, 🗑 — видалити, іконка теки — відкрити стандартну теку пресетів. Початкові пресети підтягуються з <code>library/HUD/*_Presets</code>; кнопка <b>Update HUD from Library</b> (і ⟳ у рядку) оновлює групи матеріалів із бібліотеки без втрати налаштувань.</li>
 <li>Прибрати: ✕ (Remove Section) — від виділених деталей, а без виділення — від усіх; ↻ перебудовує драйвери і ставить каркас останнім у стеку.</li></ol></div></div>
 <div class="row">
 <div class="shot"><div class="im"><img src="img/section-01-default.jpg" alt="Розріз"><span class="mk" style="left:50%;top:53%">1</span><span class="mk" style="left:69%;top:58%">2</span><span class="mk" style="left:42%;top:17%">3</span></div><div class="cap"><span class="tag t-res">РЕЗУЛЬТАТ</span>Площина повернута на 90° по X і зсунута; <b>1</b> — заливка розрізу (штриховка), <b>2</b> — зберігся корпус за площиною, <b>3</b> — переріз купола.</div></div>
@@ -328,17 +331,18 @@ td:first-child{white-space:nowrap}
 <tr><td>GHOST</td><td>Rim (контур), Rim Strength, Body (матеріал), Color, Opacity, Roughness, Transmission, IOR, Keep Part Material; перемикач Panel / Material — свій матеріал.</td></tr>
 <tr><td>GHOST WIRE</td><td>Opacity, Thickness (mm), Edge Angle; Color / Strength або свій матеріал.</td></tr>
 <tr><td>CUT EDGE</td><td>Width (mm), Blur (mm); Color / Strength.</td></tr>
-<tr><td>CUT FILL</td><td>Real cap (mesh) і Close gaps — реальна кришка з геометрії; Mix Part Material, Strength, Color A/B, Stripes, Stripe Width, Stripe Angle.</td></tr></table>
+<tr><td>CUT FILL</td><td>Real cap (mesh) — реальна кришка з геометрії (Fill Curve, версія кришки 3) і Close gaps; Mix Part Material, Strength, Color A/B, Stripes, Stripe Width, Stripe Angle.</td></tr></table>
 <div class="note">Усі четири групи в панелі — згорнуті секції; відкривай їх по клику. Дефолт добре читається, чіпай, коли потрібен інший колір або товщина штрихів.</div>
 <div class="unv">Параметри GHOST / GHOST WIRE / CUT EDGE / CUT FILL описані за кодом панелі, в роботі я їх не міняв. Real cap і Close gaps не запускались. Розріз перевірений на цільних (замкнених) мешах — з відкритими сітками результат не перевірявся.</div>
 
 <h3 id="volcut">HUD Volume Cut</h3>
 <div class="what"><b class="t">Що це</b>Той самий розріз, але обʼємним різаком: сфера, куб, циліндр або власний замкнений меш. Лишає/відсікає частину моделі всередині різака.</div>
 <div class="split">
-<div class="shot"><div class="im"><img src="img/volcut-03-panel.png" alt="Панель Volume Cut"></div><div class="cap">Sphere / Box / Cylinder / Custom, Radius, Enable, Cut Outside, ті самі групи.</div></div>
+<div class="shot"><div class="im"><img src="img/volcut-03-panel.png" alt="Панель Volume Cut"></div><div class="cap">Рядок пресетів, Sphere / Box / Cylinder / Custom, Radius, Enable, Cut Outside, ті самі групи.</div></div>
 <div>
 <ol class="steps">
 <li>Курсор в центр різака. Кнопка форми: <b>Sphere</b>, <b>Box</b>, <b>Cylinder</b> або іконка Custom (спершу зроби активним закритий меш-різак).</li>
+<li>Пресети різака працюють як у Section (список, ⤓, 🗑, тека; стандартна тека <code>rost_hud_volcut</code>).</li>
 <li>Радіус / розміри — у параметрах; різак можна рухати як звичайний обʼєкт.</li>
 <li>Різак активний + деталі виділені → <b>Add to Selected</b>.</li>
 <li><b>Cut Outside (keep inside)</b> — міняє: вирізати всередині чи лишити тільки те, що в різаку.</li></ol></div></div>
@@ -407,7 +411,7 @@ td:first-child{white-space:nowrap}
 <li><b>Create New Tool</b> — копія групи <code>LineSurface switcher</code> і Empty <code>Gradient_Direction</code> (незалежний ефект; для другого ефекту кнопку тисни ще раз).</li>
 <li>Виділи меші → <b>Load &amp; Apply Gradient Mask</b>. Матеріали копіюються (<code>.001</code>) і отримують вузол маски; параметри зʼявляються на Empty як custom properties (<b>Line Border Size</b>, <b>Border Noise</b>) і дублюються в панелі.</li>
 <li>Load &amp; Apply сам підключає Render Layers до виходу композитора (рендер не буде чорним). <b>Surface Mode</b> / <b>Line Mode</b> перемикають подачу; Line Mode перед запуском питає підтвердження.</li>
-<li>Рухай <code>Gradient_Direction</code> (позиція / поворот / масштаб) — по ньому проходить смуга. Анімуй Empty ключами.</li>
+<li><b>Transition Width</b> — ширина м'якого переходу маски (Reveal Passes керує нею ж, як «Transition»). Рухай <code>Gradient_Direction</code> (позиція / поворот / масштаб) — по ньому проходить смуга. Анімуй Empty ключами.</li>
 <li><b>🗑 Remove Mask</b> — прибирає маску з виділених (повертає Surface Mode).</li></ol>
 <div class="row">
 <div class="shot"><div class="im"><img src="img/grad-01-surface.jpg" alt="Surface Mode"></div><div class="cap"><span class="tag t-do">Surface</span>Звичайний рендер, маска підключена.</div></div>
@@ -425,7 +429,7 @@ td:first-child{white-space:nowrap}
 <div class="note">Delta-трансформації видно лише у Properties → Object → Transform → Delta. Для анімації / констрейнтів вони поводяться як звичайні — але нова <b>Location</b> тепер додається до дельти.</div>
 
 <h2 id="rp">6. Render Passes</h2>
-<div class="what"><b class="t">Що це</b>Окремий аддон <code>rost_render_passes</code> (панель у тій же вкладці Rost Tools): рендерить список view layers по черзі як «паси», кожен з власними DoF, Alpha, Denoise, рушієм, семплами і шляхом; плюс пресети якості.</div>
+<div class="what"><b class="t">Що це</b>Вбудована панель Rost Production Tools 4.3 (колишній окремий аддон <code>rost_render_passes</code>; налаштування пасів у наявних .blend зберігаються). Якщо старий окремий аддон теж увімкнений, вбудований не реєструється — вимкни старий: рендерить список view layers по черзі як «паси», кожен з власними DoF, Alpha, Denoise, рушієм, семплами і шляхом; плюс пресети якості.</div>
 <div class="split">
 <div class="shot"><div class="im"><img src="img/rp-01-panel.png" alt="Render Passes"></div><div class="cap">Render Passes: Quality, список пасів (два: <code>main_scene</code> — DoF on, <code>callout</code> — DoF off, Alpha, Cycles 64), Add Pass / To All Scenes, RENDER ANIMATION, Render Frame.</div></div>
 <div>
@@ -447,6 +451,37 @@ td:first-child{white-space:nowrap}
 <div class="note"><b>To All Scenes</b> копіює список пасів поточної сцени в усі інші і <b>замінює</b> їхні списки.</div>
 <div class="warn">Render Animation за замовчуванням (EXEC) запускає всю анімацію: у тесті пас <code>main_scene</code> рендерив кадри з частотою ~2 кадри/с, поки я не натиснув «Stop Queue and Restore». Після зупинки view layers, DoF і рушій повернулись, у статусі — «Stopped».</div>
 <div class="unv">Не перевірено: Render Frame N (файл перезаписує кадр анімації з тим самим номером), повний цикл двох пасів до кінця, скасування по Esc посередині анімації, перекриття виносок (holdout) — налаштовується вручну у view layers.</div>
+
+<h2 id="rv">6а. Reveal Passes</h2>
+<div class="what"><b class="t">Що це</b>Панель Reveal Passes (4.4) будує ефект «оболонка розчиняється у скло» для композу <b>в один клік</b>: з колекції <b>SHELL</b> робить копії, створює view layers <code>alternative</code> і <code>line</code>, ланцюжок градієнтної маски (<code>LineSurface switcher</code> → <code>Appears FX</code> → <code>GradiendMask</code>) і редаговані ноди композитора <code>RV_*</code>; на виході multilayer EXR з пасами <code>original</code>, <code>alternative</code>, <code>line</code>, <code>object_mask</code>. Працює лише з Cycles; для рендера потрібна камера в сцені.</div>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/rv-01-panel-plane.png" alt="Reveal Passes, маска Plane"></div><div class="cap">Reveal Passes: SHELL / KEEP / Glass, Build / Update, блок «Лінія», «Маска» (Plane), Wireframe, Advanced.</div></div>
+<div>
+<ol class="steps">
+<li>Підготуй колекції: <b>SHELL</b> (меші, що стають склом) і <b>KEEP</b> (меші, що лишаються як є). У полі <b>Glass</b> — alternative-матеріал (порожньо = скло <code>RV_Alt_Glass</code>).</li>
+<li><b>Build / Update</b>: створює копії SHELL у <code>SHELL_alternative</code>, view layers, Empty <code>Gradient_Direction</code>, матеріали з маскою і ноди композитора. Далі панель лишається для тонкого налаштування.</li>
+<li>Блок <b>Лінія</b>: <b>Width</b> — товщина лінії межі, <b>Transition</b> — м'якість переходу, <b>Waviness</b> — хвилястість фронту. <b>Select Gradient</b> виділяє Empty, яким рухають фронт (позиція, поворот, масштаб, ключі).</li>
+<li>Рендер кадра (F12) або анімації (Ctrl+F12) пише EXR у теку <b>Output</b> (ім'я <code>reveal_</code>).</li></ol></div></div>
+<h4>Маска: Plane і Shapes</h4>
+<div class="split">
+<div class="shot"><div class="im"><img src="img/rv-02-panel-shapes.png" alt="Reveal Passes, маска Shapes"></div><div class="cap">Режим <b>Shapes</b>: кнопки форм (сфера, куб, циліндр, капсула), список фігур, Softness, Invert / Update / Select, Wireframe, Advanced.</div></div>
+<div>
+<ul>
+<li><b>Plane</b> — фронт ефекту проходить площиною, яку задає Empty.</li>
+<li><b>Shapes</b> — фронт задається фігурами (до 8): кнопка форми додає обʼєкт <code>RV_…</code>, який рухаєш і масштабуєш як звичайний; зона ефекту — обʼєднання відстаней до фігур. Радіус сфери / капсули 1 і пів-довжина циліндра 1 при масштабі 1.</li>
+<li><b>Softness</b> — м'якість краю зони; <b>Invert</b> — інвертує зону; <b>Update</b> — перечитує фігури; <b>Select</b> — виділяє фігури; ✕ біля фігури — видаляє її з маски.</li></ul></div></div>
+<h4>Wireframe</h4>
+<p>Кнопка <b>Add to Selected</b> створює колекцію <code>SHELL_wire</code> з копіями <code>.wire</code> виділених мешів (приховані за замовчуванням, з модифікатором Wireframe); <b>Thickness</b> — товщина; <b>Remove</b> / <b>Remove All</b> прибирають копії. Колекцію можна вільно доповнювати власними шейпами і матеріалами. Wireframe важкий: на шафі з ~457 деталями Cycles у тесті займав ~38 ГБ RAM із 68.</p>
+<h4>Паси в EXR</h4>
+<table><tr><th>Пас</th><th>Що це</th></tr>
+<tr><td><code>original</code></td><td>Оригінальні матеріали з ефектом маски</td></tr>
+<tr><td><code>alternative</code></td><td>Копії SHELL з alternative-матеріалом</td></tr>
+<tr><td><code>line</code></td><td>Біла лінія межі з альфою (<code>line</code>: лише SHELL + KEEP як holdout, Environment off, без світла)</td></tr>
+<tr><td><code>object_mask</code></td><td>Cryptomatte-маска матеріалів SHELL з original layer</td></tr></table>
+<h4>Advanced</h4>
+<p><b>Original</b> — view layer з ефектом; <b>Output</b> — тека EXR; <b>Refresh object_mask</b> — перечитує матеріали SHELL; <b>Reset Compositor Nodes</b> — видаляє ноди <code>RV_*</code> і створює заново; <b>Remove Reveal Setup</b> — прибирає все створене.</p>
+<div class="note">Ноди <code>RV_*</code> (рамка «Reveal Passes») можна правити: Build / Update їх не перезаписує, лише оновлює шари й список матеріалів. Світло для кожного view layer окреме — виключай (Exclude) колекції зі світлом там, де вони не потрібні.</div>
+<div class="unv">Не перевірено: Wireframe-пас до кінця рендера, анімація серії кадрів, SHELL з власними модифікаторами, вкладені колекції SHELL.</div>
 
 <h2 id="faq">7. Типові проблеми</h2>
 <table><tr><th>Симптом</th><th>Причина і що робити</th></tr>
@@ -470,9 +505,10 @@ td:first-child{white-space:nowrap}
 <li>HUD Measure: Angle from Selection, Outer, Ruler/Dimension.</li>
 <li>HUD Section / Volume Cut: Real cap, Close gaps, група параметрів Ghost/Wire/Edge/Fill; Box, Cylinder, Custom.</li>
 <li>HUD FUI: режими Counter, типи Bars, Brackets Frame, Show Fill.</li>
-<li>Render Passes: Render Frame N, повний прохід двох пасів, Esc.</li></ul>
+<li>Render Passes: Render Frame N, повний прохід двох пасів, Esc.</li>
+<li>Reveal Passes: Wireframe-пас до кінця, анімація серії кадрів.</li></ul>
 
-<p style="margin-top:40px;color:var(--mute)">Rost Production Tools 4.1 · Blender 5.2 · гайд зібраний на тестовій сцені 16.11.2026, оновлений того ж вечора після виправлень.</p>
+<p style="margin-top:40px;color:var(--mute)">Rost Production Tools 4.4 · Blender 5.2 · гайд звірений з аддоном і оновлений 20.11.2026; скріншоти панелей зняті у Blender 5.2.1.</p>
 </main>
 </div>
 <script>
