@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "kind": "SECTION",
+  "name": "Ghost_M-01",
+  "blender": "5.2.1 LTS",
+  "inputs": {
+    "Ghost Body": {
+      "type": "NodeSocketFloat",
+      "value": 0.05000000074505806
+    },
+    "Ghost Color": {
+      "type": "NodeSocketColor",
+      "value": [
+        0.75,
+        0.8999999761581421,
+        1.0,
+        1.0
+      ]
+    },
+    "Ghost Opacity": {
+      "type": "NodeSocketFloat",
+      "value": 0.10000000149011612
+    },
+    "Ghost Roughness": {
+      "type": "NodeSocketFloat",
+      "value": 0.15000000596046448
+    },
+    "Ghost Transmission": {
+      "type": "NodeSocketFloat",
+      "value": 0.0
+    },
+    "Ghost IOR": {
+      "type": "NodeSocketFloat",
+      "value": 1.4500000476837158
+    },
+    "Ghost Keep Material": {
+      "type": "NodeSocketFloat",
+      "value": 0.0
+    },
+    "Ghost Use Material": {
+      "type": "NodeSocketBool",
+      "value": false
+    },
+    "Ghost Material": {
+      "type": "NodeSocketMaterial",
+      "value": {
+        "__id__": "Material",
+        "name": "glass"
+      }
+    },
+    "Cap Use Material": {
+      "type": "NodeSocketFloat",
+      "value": 0.0
+    },
+    "Cap Use Custom": {
+      "type": "NodeSocketBool",
+      "value": true
+    },
+    "Cap Material": {
+      "type": "NodeSocketMaterial",
+      "value": {
+        "__id__": "Material",
+        "name": "StainlessSteel_Brushed.local"
+      }
+    },
+    "Wire Material": {
+      "type": "NodeSocketMaterial",
+      "value": null
+    },
+    "Wire Use Material": {
+      "type": "NodeSocketBool",
+      "value": false
+    },
+    "Wire Color": {
+      "type": "NodeSocketColor",
+      "value": [
+        0.0,
+        0.5329999923706055,
+        1.0,
+        1.0
+      ]
+    },
+    "Wire Strength": {
+      "type": "NodeSocketFloat",
+      "value": 1.0
+    },
+    "Edge Use Material": {
+      "type": "NodeSocketBool",
+      "value": false
+    },
+    "Edge Material": {
+      "type": "NodeSocketMaterial",
+      "value": null
+    },
+    "Edge Width (mm)": {
+      "type": "NodeSocketFloat",
+      "value": 1.0
+    },
+    "Edge Glow (mm)": {
+      "type": "NodeSocketFloat",
+      "value": 3.0
+    },
+    "Edge Color": {
+      "type": "NodeSocketColor",
+      "value": [
+        0.15000000596046448,
+        0.550000011920929,
+        1.0,
+        1.0
+      ]
+    },
+    "Edge Strength": {
+      "type": "NodeSocketFloat",
+      "value": 4.0
+    },
+    "Ghost": {
+      "type": "NodeSocketFloat",
+      "value": 0.10000000149011612
+    },
+    "Ghost Strength": {
+      "type": "NodeSocketFloat",
+      "value": 0.5
+    },
+    "Ghost Wire": {
+      "type": "NodeSocketFloat",
+      "value": 0.0
+    },
+    "Wire (mm)": {
+      "type": "NodeSocketFloat",
+      "value": 0.0
+    },
+    "Wire Angle": {
+      "type": "NodeSocketFloat",
+      "value": 40.0
+    },
+    "Cap Stripes": {
+      "type": "NodeSocketBool",
+      "value": true
+    },
+    "Cap Color A": {
+      "type": "NodeSocketColor",
+      "value": [
+        0.8500000238418579,
+        0.8799999952316284,
+        0.949999988079071,
+        1.0
+      ]
+    },
+    "Cap Color B": {
+      "type": "NodeSocketColor",
+      "value": [
+        0.05000000074505806,
+        0.2199999988079071,
+        0.75,
+        1.0
+      ]
+    },
+    "Stripe Width (mm)": {
+      "type": "NodeSocketFloat",
+      "value": 4.0
+    },
+    "Stripe Angle": {
+      "type": "NodeSocketFloat",
+      "value": 45.0
+    },
+    "Cap Strength": {
+      "type": "NodeSocketFloat",
+      "value": 1.0
+    },
+    "Frame Opacity": {
+      "type": "NodeSocketFloat",
+      "value": 1.0
+    }
+  }
+}

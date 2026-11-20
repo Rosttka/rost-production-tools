@@ -1,13 +1,16 @@
 bl_info = {
-    "name": "Rost Production Tools 4.2",
+    "name": "Rost Production Tools 4.4",
     "author": "Rost",
-    "version": (4, 2, 0),
+    "version": (4, 4, 0),
     "blender": (5, 0, 0),
     "location": "View3D > Sidebar > Rost Tools",
-    "description": "HUD Callout (Add, Cutout, Presets), Proximity Alpha, Gradient Mask (multi-instance), CAD Auto-Rig, Material cleanup, Delta transforms, Rost Light Rig, STEP Pipeline",
+    "description": "HUD Callout (Add, Cutout, Presets), Proximity Alpha, Gradient Mask (multi-instance), CAD Auto-Rig, Material cleanup, Delta transforms, Rost Light Rig, STEP Pipeline, Render Passes, Reveal Passes",
     "category": "Object",
 }
 
+# v4.3:  Додано панель Render Passes (render_passes.py, колишній окремий аддон rost_render_passes 1.1.0): рендер по View Layer-ах
+#       з DoF/Alpha/Denoise/шляхом на прохід + пресети якості. Ті самі імена (scene.rost_rp, rost_rp.*) — налаштування в наявних .blend зберігаються.
+#       Якщо окремий аддон rost_render_passes теж увімкнений — вбудована копія не реєструється (щоб не було конфлікту).
 # v4.2:  Аддон — пакет (rost_production_tools/__init__.py) з бібліотеками всередині (library/): HUD_*.blend,
 #       PT_NodeGroups_and_Mats.blend, fx_data.blend, GN_Proximity_Mask.blend, Callout_Presets. Жодних шляхів до зовнішніх дисків:
 #       усе береться відносно папки аддона. Налаштування HUD Library / STEP Pipeline folder у Preferences — лише для перевизначення.
@@ -73,6 +76,7 @@ bl_info = {
 
 import bpy
 import os
+import shutil
 import json
 from pathlib import Path
 
@@ -258,7 +262,7 @@ def setup_compositor(scene):
     nodes = tree.nodes
     links = tree.links
 
-    rl = next((n for n in nodes if n.type == 'R_LAYERS'), None)
+    rl = next((n for n in nodes if n.type == 'R_LAYERS' and not n.name.startswith('RV_')), None)
     if not rl:
         rl = nodes.new('CompositorNodeRLayers')
         rl.name = "Render Layers"
@@ -287,7 +291,7 @@ def ensure_comp_output(scene):
     tree = get_compositor_tree(scene, create=False)
     if not tree:
         return
-    rl = next((n for n in tree.nodes if n.type == 'R_LAYERS'), None)
+    rl = next((n for n in tree.nodes if n.type == 'R_LAYERS' and not n.name.startswith('RV_')), None)
     if not rl:
         return
     for sock in _compositor_output_sockets(tree):
@@ -445,6 +449,9 @@ class FX_OT_ApplyMask(bpy.types.Operator):
 
         copied_mats = {}
         touched_trees = set()
+
+        # Матеріали Library Override не редагуються: спершу локальні копії (.local), як у HUD Section
+        hud_localize_mats([o for o in context.selected_objects if o.type == 'MESH'])
 
         for obj in context.selected_objects:
             if obj.type != 'MESH':
@@ -1468,8 +1475,42 @@ def hud_lib_path(context):
     return HUD_LIB_DEFAULT
 
 
+HUD_PRESET_STD = {"CALLOUT": "rost_hud_callout", "SECTION": "rost_hud_section", "VOLCUT": "rost_hud_volumecut"}
+HUD_PRESET_SEED = {"CALLOUT": "Callout_Presets", "SECTION": "Section_Presets", "VOLCUT": "VolumeCut_Presets"}
+
+
+def hud_preset_std_dir(context, kind):
+    """Стандартне місце пресетів Blender: <user scripts>/presets/rost_hud_<вид> (поруч із rost_light_rig).
+    Єдине правило для всіх ПК, без прив'язки до літери диска. Якщо в налаштуваннях аддона вказана
+    власна папка, то береться вона (підпапка Callout_Presets / Section_Presets / VolumeCut_Presets).
+    При першому створенні папки в неї копіюються пресети, що йдуть в комплекті з аддоном
+    (library/HUD/<вид>_Presets); існуючі потім не чіпаються."""
+    try:
+        v = context.preferences.addons[__name__].preferences.cutstyle_dir
+    except Exception:
+        v = ""
+    if v:
+        d = os.path.join(bpy.path.abspath(v), HUD_PRESET_SEED[kind])
+        os.makedirs(d, exist_ok=True)
+        return d
+    base = bpy.utils.user_resource('SCRIPTS', path="presets", create=True)
+    d = os.path.join(base, HUD_PRESET_STD[kind])
+    fresh = not os.path.isdir(d)
+    os.makedirs(d, exist_ok=True)
+    if fresh:
+        seed = os.path.join(os.path.dirname(os.path.abspath(__file__)), "library", "HUD", HUD_PRESET_SEED[kind])
+        try:
+            if os.path.isdir(seed):
+                for f in os.listdir(seed):
+                    if f.lower().endswith(".json"):
+                        shutil.copy2(os.path.join(seed, f), os.path.join(d, f))
+        except Exception as e:
+            print("[HUD] seed presets:", e)
+    return d
+
+
 def hud_presets_dir(context):
-    return os.path.join(os.path.dirname(hud_lib_path(context)), "Callout_Presets")
+    return hud_preset_std_dir(context, "CALLOUT")
 
 
 def _hud_inputs(g):
@@ -2946,10 +2987,15 @@ class RossToolsPreferences(bpy.types.AddonPreferences):
         name="STEP Pipeline folder", subtype='DIR_PATH', default="",
         description="Папка зі скриптами STEP Pipeline (exm_pipeline.py, exm_rig.py, ...). Порожньо = library/EXM_Pipeline в папці аддона")
 
+    cutstyle_dir: bpy.props.StringProperty(
+        name="Section / Volume Cut presets folder", subtype='DIR_PATH', default="",
+        description="Папка пресетів стилю Section і Volume Cut (підпапки Section_Presets, VolumeCut_Presets). Порожньо = стандартна тека пресетів Blender: <user scripts>/presets/rost_hud_section та rost_hud_volcut")
+
     def draw(self, context):
         self.layout.prop(self, "hud_library")
         self.layout.prop(self, "preset_dir")
         self.layout.prop(self, "pipeline_dir")
+        self.layout.prop(self, "cutstyle_dir")
 
 
 hud_classes = (
@@ -3072,11 +3118,61 @@ def _sec_load(context, collections=(), node_groups=()):
     return dst, None
 
 
+SEC_GATE_ATTR = "hud_sec"
+
+
+def sec_gate_group(g=None):
+    """Розріз у шейдері діє ЛИШЕ на об'єкти з властивістю hud_sec (Add to Selected її ставить).
+    Без цього шейдер обрізає й деталі, що не виділялись, але ділять матеріал. Ідемпотентно:
+    додає в групу HUD_Section вузол Attribute (Object) і множить на нього Enable."""
+    g = g or bpy.data.node_groups.get(SEC_SHADER)
+    if g is None or "HUD_ObjGate" in g.nodes:
+        return False
+    gi = next((n for n in g.nodes if n.type == 'GROUP_INPUT'), None)
+    en = gi.outputs.get("Enable") if gi else None
+    if en is None:
+        return False
+    at = g.nodes.new('ShaderNodeAttribute')
+    at.name = "HUD_ObjAttr"
+    at.label = f"per-object gate ({SEC_GATE_ATTR})"
+    at.attribute_type = 'OBJECT'
+    at.attribute_name = SEC_GATE_ATTR
+    at.location = (gi.location.x + 200, gi.location.y - 420)
+    mul = g.nodes.new('ShaderNodeMath')
+    mul.name = "HUD_ObjGate"
+    mul.label = f"Enable x {SEC_GATE_ATTR}"
+    mul.operation = 'MULTIPLY'
+    mul.use_clamp = True
+    mul.location = (gi.location.x + 420, gi.location.y - 420)
+    for l in list(en.links):
+        to = l.to_socket
+        g.links.remove(l)
+        g.links.new(mul.outputs[0], to)
+    g.links.new(en, mul.inputs[0])
+    g.links.new(at.outputs["Fac"], mul.inputs[1])
+    return True
+
+
+def sec_mark(o):
+    o[SEC_GATE_ATTR] = 1.0
+
+
+def sec_unmark_if_free(o):
+    if o.get(SEC_GATE_ATTR) is None:
+        return
+    for m in o.modifiers:
+        if m.type == 'NODES' and m.node_group and m.node_group.name.startswith(("GN_HUD_SectionWire", "GN_HUD_SectionCap")):
+            return
+    del o[SEC_GATE_ATTR]
+
+
 def sec_ensure_groups(context):
     missing = [g for g in SEC_GROUPS if g not in bpy.data.node_groups]
     if not missing:
+        sec_gate_group()
         return None
     _, err = _sec_load(context, node_groups=tuple(missing))
+    sec_gate_group()
     return err
 
 
@@ -3269,22 +3365,30 @@ SEC_CAP_GROUP = "GN_HUD_SectionCap"
 SEC_CAP_MOD = "HUD_SectionCap"
 
 
+SEC_CAP_VER = 3     # 3: кап = контури розрізу + Fill Curve (замість n-кутника з Boolean, який ламався на деталях із отворами); 2: автофолбек Manifold->Exact, bbox-gate
+
+
 def sec_cap_group():
     g = bpy.data.node_groups.get(SEC_CAP_GROUP)
-    if g is not None:
-        return g
-    g = bpy.data.node_groups.new(SEC_CAP_GROUP, 'GeometryNodeTree')
+    fresh = g is None
+    if not fresh:
+        if g.get("hud_ver", 1) >= SEC_CAP_VER:
+            return g
+        g.nodes.clear()          # інтерфейс лишаємо: значення вхідних у модифікаторах не губляться
+    else:
+        g = bpy.data.node_groups.new(SEC_CAP_GROUP, 'GeometryNodeTree')
     I = g.interface
-    I.new_socket("Geometry", in_out='INPUT', socket_type='NodeSocketGeometry')
-    I.new_socket("Geometry", in_out='OUTPUT', socket_type='NodeSocketGeometry')
-    I.new_socket("Section", in_out='INPUT', socket_type='NodeSocketObject')
-    I.new_socket("Flip Side", in_out='INPUT', socket_type='NodeSocketBool')
-    I.new_socket("Hole Tolerant", in_out='INPUT', socket_type='NodeSocketBool')
-    so = I.new_socket("Offset (mm)", in_out='INPUT', socket_type='NodeSocketFloat')
-    so.default_value, so.min_value = 0.01, 0.0
-    st = I.new_socket("Tolerance (mm)", in_out='INPUT', socket_type='NodeSocketFloat')
-    st.default_value, st.min_value = 0.005, 0.0
-    I.new_socket("Material", in_out='INPUT', socket_type='NodeSocketMaterial')
+    if fresh:
+        I.new_socket("Geometry", in_out='INPUT', socket_type='NodeSocketGeometry')
+        I.new_socket("Geometry", in_out='OUTPUT', socket_type='NodeSocketGeometry')
+        I.new_socket("Section", in_out='INPUT', socket_type='NodeSocketObject')
+        I.new_socket("Flip Side", in_out='INPUT', socket_type='NodeSocketBool')
+        I.new_socket("Hole Tolerant", in_out='INPUT', socket_type='NodeSocketBool')
+        so = I.new_socket("Offset (mm)", in_out='INPUT', socket_type='NodeSocketFloat')
+        so.default_value, so.min_value = 0.01, 0.0
+        st = I.new_socket("Tolerance (mm)", in_out='INPUT', socket_type='NodeSocketFloat')
+        st.default_value, st.min_value = 0.005, 0.0
+        I.new_socket("Material", in_out='INPUT', socket_type='NodeSocketMaterial')
     N, Lk = g.nodes, g.links
 
     def nd(t, x, y, label=""):
@@ -3377,7 +3481,15 @@ def sec_cap_group():
         Lk.new(t2.outputs[0], b.inputs["Mesh"])
     sw2 = nd('GeometryNodeSwitch', 850, 100)
     sw2.input_type = 'GEOMETRY'
-    Lk.new(gi.outputs["Hole Tolerant"], sw2.inputs["Switch"])
+    fcn = nd('GeometryNodeAttributeDomainSize', 600, 420, "faces after Manifold")
+    fcn.component = 'MESH'
+    Lk.new(b1.outputs["Mesh"], fcn.inputs[0])
+    emp = Mt('LESS_THAN', fcn.outputs["Face Count"], 1, 750, 420, "Manifold gave nothing")
+    orn = nd('FunctionNodeBooleanMath', 850, 420, "Hole Tolerant OR fallback")
+    orn.operation = 'OR'
+    Lk.new(gi.outputs["Hole Tolerant"], orn.inputs[0])
+    Lk.new(emp.outputs[0], orn.inputs[1])
+    Lk.new(orn.outputs[0], sw2.inputs["Switch"])
     Lk.new(b1.outputs["Mesh"], sw2.inputs[1])
     Lk.new(b2.outputs["Mesh"], sw2.inputs[2])
     pos = nd('GeometryNodeInputPosition', 700, -500)
@@ -3395,17 +3507,77 @@ def sec_cap_group():
     cmp.data_type, cmp.operation = 'FLOAT', 'GREATER_THAN'
     Lk.new(ev.outputs[0], cmp.inputs[0])
     Lk.new(tol_m.outputs[0], cmp.inputs[1])
-    dl = nd('GeometryNodeDeleteGeometry', 1750, 100)
+    # v3: Boolean дає кап одним n-кутником із «замковими щілинами» навколо отворів; Blender
+    # розбиває такий n-кутник на трикутники хибно (заливка порожнини, величезний трикутник).
+    # Тому беремо лише ВНУТРІШНІ контури розрізу (ребра стінок на площині), заливаємо їх
+    # Fill Curve (CDT, правило even-odd) у просторі Section і повертаємо в простір деталі.
+    ncap = nd('FunctionNodeBooleanMath', 1750, -300, "is cap face")
+    ncap.operation = 'NOT'
+    Lk.new(cmp.outputs[0], ncap.inputs[0])
+    dl = nd('GeometryNodeDeleteGeometry', 1950, -300, "walls (cap removed)")
     dl.domain, dl.mode = 'FACE', 'ALL'
     Lk.new(sw2.outputs[0], dl.inputs["Geometry"])
-    Lk.new(cmp.outputs[0], dl.inputs["Selection"])
-    sm = nd('GeometryNodeSetMaterial', 1950, 100)
-    Lk.new(dl.outputs[0], sm.inputs["Geometry"])
+    Lk.new(ncap.outputs[0], dl.inputs["Selection"])
+    near = nd('FunctionNodeCompare', 1950, -500, "edge in plane")
+    near.data_type, near.operation = 'FLOAT', 'LESS_THAN'
+    Lk.new(adz.outputs[0], near.inputs[0])
+    Lk.new(tol_m.outputs[0], near.inputs[1])
+    m2c = nd('GeometryNodeMeshToCurve', 2150, -300, "section outline")
+    Lk.new(dl.outputs[0], m2c.inputs["Mesh"])
+    Lk.new(near.outputs[0], m2c.inputs["Selection"])
+    t_in = nd('GeometryNodeTransform', 2350, -300, "outline to section space")
+    t_in.inputs["Mode"].default_value = 'Matrix'
+    Lk.new(m2c.outputs[0], t_in.inputs["Geometry"])
+    Lk.new(inv.outputs[0], t_in.inputs["Transform"])
+    fc = nd('GeometryNodeFillCurve', 2550, -300, "fill outline")
+    try:
+        fc.inputs["Mode"].default_value = 'Triangles'
+        fc.inputs["Fill Rule"].default_value = 'Even-Odd'
+    except Exception:
+        pass
+    Lk.new(t_in.outputs[0], fc.inputs["Curve"])
+    fpos = nd('GeometryNodeInputPosition', 2550, -500)
+    fsep = nd('ShaderNodeSeparateXYZ', 2700, -500)
+    Lk.new(fpos.outputs[0], fsep.inputs[0])
+    fcmb = nd('ShaderNodeCombineXYZ', 2850, -500, "flatten to plane")
+    Lk.new(fsep.outputs[0], fcmb.inputs[0])
+    Lk.new(fsep.outputs[1], fcmb.inputs[1])
+    Lk.new(zplane.outputs[0], fcmb.inputs[2])
+    fset = nd('GeometryNodeSetPosition', 2750, -300)
+    Lk.new(fc.outputs[0], fset.inputs["Geometry"])
+    Lk.new(fcmb.outputs[0], fset.inputs["Position"])
+    t_out = nd('GeometryNodeTransform', 2950, -300, "cap back to part space")
+    t_out.inputs["Mode"].default_value = 'Matrix'
+    Lk.new(fset.outputs[0], t_out.inputs["Geometry"])
+    Lk.new(oi.outputs["Transform"], t_out.inputs["Transform"])
+    ffl = nd('GeometryNodeFlipFaces', 3150, -300, "cap normal outward")
+    Lk.new(t_out.outputs[0], ffl.inputs["Mesh"])
+    Lk.new(gi.outputs["Flip Side"], ffl.inputs["Selection"])
+    sm = nd('GeometryNodeSetMaterial', 3350, -300)
+    Lk.new(ffl.outputs[0], sm.inputs["Geometry"])
     Lk.new(gi.outputs["Material"], sm.inputs["Material"])
-    jn = nd('GeometryNodeJoinGeometry', 2150, 0)
+    # bbox-gate: якщо сфера, що описує деталь, не торкається площини, Boolean не рахується
+    vdir = nd('FunctionNodeTransformDirection', -1000, -350, "bbox diagonal in section space")
+    Lk.new(vsub.outputs[0], vdir.inputs[0])
+    Lk.new(inv.outputs[0], vdir.inputs[1])
+    vl2 = nd('ShaderNodeVectorMath', -850, -450)
+    vl2.operation = 'LENGTH'
+    Lk.new(vdir.outputs[0], vl2.inputs[0])
+    hr = Mt('MULTIPLY_ADD', vl2.outputs[0], 0.6, -700, -450, "radius x1.2")
+    hr.inputs[2].default_value = 0.005
+    touch = Mt('LESS_THAN', cz.outputs[0], hr.outputs[0], -550, -450, "plane touches part")
+    gate = nd('GeometryNodeSwitch', 2050, 100, "bbox gate")
+    gate.input_type = 'GEOMETRY'
+    Lk.new(touch.outputs[0], gate.inputs["Switch"])
+    Lk.new(sm.outputs[0], gate.inputs[2])
+    jn = nd('GeometryNodeJoinGeometry', 2250, 0)
+    # порядок лінків = порядок матеріалів у результаті: деталь першою, кап останнім
+    # ([мат1, мат2, …, HUD_SecCap]); інакше кап-матеріал стає слотом 0, а матеріали деталі
+    # випадають за межі слотів об'єкта (деталь із капом виходить нерозрізаною).
+    Lk.new(gate.outputs[0], jn.inputs[0])
     Lk.new(gi.outputs["Geometry"], jn.inputs[0])
-    Lk.new(sm.outputs[0], jn.inputs[0])
     Lk.new(jn.outputs[0], go.inputs[0])
+    g["hud_ver"] = SEC_CAP_VER
     return g
 
 
@@ -3746,6 +3918,16 @@ def sec_matgroup(mat, rebuild=False, planar=None):
     out = next((n for n in outs if n.is_active_output), outs[0] if outs else None)
     if out is not None and out.inputs["Surface"].is_linked:
         l = out.inputs["Surface"].links[0]
+        # у .local-копії Surface йде через вузол HUD_Section (його ми не копіюємо) — беремо шейдер,
+        # що живить його вхід Shader, інакше вихід групи лишається порожнім і кап рендериться чорним
+        _hop = 0
+        while (l.from_node.type == 'GROUP' and l.from_node.node_tree
+               and _hud_base(l.from_node.node_tree.name) == SEC_SHADER and _hop < 8):
+            _si = l.from_node.inputs.get("Shader")
+            if _si is None or not _si.is_linked:
+                break
+            l = _si.links[0]
+            _hop += 1
         a = mp.get(l.from_node.name)
         if a is not None:
             fi = _sock_index(l.from_node.outputs, l.from_socket)
@@ -4010,6 +4192,7 @@ def _sec_wire_mat_handler(*_a):
 
 def sec_refresh(sec):
     sec_init_defaults(sec)
+    sec_gate_group()
     sec_apply_slots(sec, rebuild=True)
     sec_sync_wire_material(sec)
     nm = 0
@@ -4024,6 +4207,7 @@ def sec_refresh(sec):
             sec_wire_to_last(o, w)
             sec_wire_drivers(o, w, sec)
             sec_cap_add(o, sec)
+            sec_mark(o)
             o.update_tag()
             nw += 1
     sec_cap_sync(sec)
@@ -4074,6 +4258,34 @@ class HUD_OT_section_add(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def hud_localize_mats(objs):
+    """Матеріали з бібліотеки (Library Override) не редагуються: даємо деталі локальну копію
+    матеріалу (на рівні обʼєкта, якщо меш лінкований). Копія одна на матеріал: <імʼя>.local."""
+    n = 0
+    for o in objs:
+        if o.library:
+            continue
+        data = o.data
+        data_ro = bool(data and (data.library or data.override_library))
+        for s in o.material_slots:
+            m = s.material
+            if not m or not (m.library or m.override_library):
+                continue
+            nm = m.name + ".local"
+            cp = bpy.data.materials.get(nm)
+            if cp is None or cp.library:
+                cp = m.copy()
+                cp.name = nm
+            try:
+                if s.link == 'DATA' and data_ro:
+                    s.link = 'OBJECT'
+                s.material = cp
+                n += 1
+            except Exception as e:
+                print("[HUD] localize:", o.name, e)
+    return n
+
+
 class HUD_OT_section_apply(bpy.types.Operator):
     """Підключити виділені деталі до активного Section: розріз у матеріалах + каркас (останнім у стеку)"""
     bl_idname = "hud.section_apply"
@@ -4096,6 +4308,9 @@ class HUD_OT_section_apply(bpy.types.Operator):
         if not objs:
             self.report({'WARNING'}, "Виділи деталі (і Section активним останнім)")
             return {'CANCELLED'}
+        hud_localize_mats(objs)
+        for o in objs:
+            sec_mark(o)
         mats = []
         for o in objs:
             for s in o.material_slots:
@@ -4136,6 +4351,7 @@ class HUD_OT_section_remove(bpy.types.Operator):
         nw = sum(sec_wire_remove(o, sec) for o in objs)
         for o in objs:
             sec_cap_remove(o, sec)
+            sec_unmark_if_free(o)
         self.report({'INFO'}, f"{sec.name}: прибрано з матеріалів — {nm}, каркасів — {nw}")
         return {'FINISHED'}
 
@@ -4188,6 +4404,7 @@ class OBJECT_PT_RossSectionPanel(bpy.types.Panel):
                     sk = _hud_sock(m, ids.get(nm))
                     if sk is not None:
                         c.prop(sk, "value", text=lab or nm)
+            _cutstyle_row(box, sc, "SECTION")
             _props(box, (("Enable", None), ("Flip Side", None), ("Frame Opacity", None)))
             def _switch(layout, use_nm, mat_nm):
                 use = _hud_sock(m, ids.get(use_nm))
@@ -4241,6 +4458,7 @@ class OBJECT_PT_RossSectionPanel(bpy.types.Panel):
         r.operator("hud.section_apply", icon='SELECT_SUBTRACT')
         r.operator("hud.section_remove", text="", icon='X')
         r.operator("hud.section_refresh", text="", icon='FILE_REFRESH')
+        r.operator("hud.resync_local_mats", text="", icon='LIBRARY_DATA_OVERRIDE')
         if sec is not None:
             nm = sum(len(sec_nodes(mt, sec)) for mt in bpy.data.materials)
             nw = sum(len(sec_wire_mods(o, sec)) for o in bpy.data.objects)
@@ -4249,13 +4467,324 @@ class OBJECT_PT_RossSectionPanel(bpy.types.Panel):
             b.label(text="Зроби Section активним", icon='INFO')
 
 
+def hud_resync_local_mats():
+    """Оновити локальні копії <імʼя>.local з оригінальних (лінкованих) матеріалів
+    і відновити на них Section / Volume Cut."""
+    res = {"synced": 0, "missing": []}
+    jobs = []
+    for old in list(bpy.data.materials):
+        if old.library or not old.name.endswith(".local"):
+            continue
+        base = old.name[:-len(".local")]
+        src = next((m for m in bpy.data.materials
+                    if m.name == base and (m.library or m.override_library)), None)
+        if src is None:
+            res["missing"].append(base)
+            continue
+        cuts = [(c, _hud_base(g.node_tree.name)) for g, c in sec_nodes(old) if c is not None]
+        jobs.append((old, src, base, cuts))
+    touched = []
+    for old, src, base, cuts in jobs:
+        new = src.copy()
+        old.name = base + ".local_old"
+        new.name = base + ".local"
+        old.user_remap(new)
+        bpy.data.materials.remove(old)
+        for c, shader in cuts:
+            grp = bpy.data.node_groups.get(shader)
+            if grp is not None and sec_insert(new, c, grp) and c not in touched:
+                touched.append(c)
+        res["synced"] += 1
+    for c in touched:
+        if sec_is_section(c):
+            sec_refresh(c)
+        else:
+            vc_refresh(c)
+    return res
+
+
+class HUD_OT_resync_local_mats(bpy.types.Operator):
+    """Підтягнути зміни оригінальних матеріалів у локальні копії (.local) і відновити на них Section / Volume Cut"""
+    bl_idname = "hud.resync_local_mats"
+    bl_label = "Sync Local Materials"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        r = hud_resync_local_mats()
+        msg = f"Синхронізовано матеріалів: {r['synced']}"
+        if r["missing"]:
+            msg += f" · не знайдено оригінал: {', '.join(r['missing'][:3])}"
+        self.report({'INFO'} if not r["missing"] else {'WARNING'}, msg)
+        return {'FINISHED'}
+
+
+# ==============================================================================
+# ПРЕСЕТИ СТИЛЮ Section / Volume Cut
+# ==============================================================================
+# Пресет = лише вигляд (Ghost, Ghost Wire, Cut Edge, Cut Fill, Frame Opacity) у JSON.
+# НЕ входять: Enable, Flip Side, форма й розміри різака, Real cap / Close gaps, Custom Object,
+# положення в сцені. Папка: <папка бібліотеки HUD>/Section_Presets і VolumeCut_Presets
+# (поруч із Callout_Presets). Застосовується до виділених Section / різаків
+# (якщо виділених немає, то до того, що вибрано в панелі).
+CUTSTYLE_KINDS = {"SECTION": ("Section_Presets", "hud_sec_preset"),
+                  "VOLCUT": ("VolumeCut_Presets", "hud_vc_preset")}
+CUTSTYLE_NAMES = frozenset((
+    "Frame Opacity",
+    "Ghost", "Ghost Strength", "Ghost Body", "Ghost Color", "Ghost Opacity", "Ghost Roughness",
+    "Ghost Transmission", "Ghost IOR", "Ghost Keep Material", "Ghost Use Material", "Ghost Material",
+    "Ghost Wire", "Wire (mm)", "Wire Angle", "Wire Use Material", "Wire Material", "Wire Color", "Wire Strength",
+    "Edge Width (mm)", "Edge Glow (mm)", "Edge Use Material", "Edge Material", "Edge Color", "Edge Strength",
+    "Cap Use Custom", "Cap Material", "Cap Use Material", "Cap Strength", "Cap Color A", "Cap Color B",
+    "Cap Stripes", "Stripe Width (mm)", "Stripe Angle",
+))
+# зміна цих входів потребує ⟳ (перебудова слотів-матеріалів); решта йде через драйвери одразу
+CUTSTYLE_REBUILD = frozenset(("Ghost Use Material", "Ghost Material", "Wire Use Material", "Wire Material",
+                              "Edge Use Material", "Edge Material", "Cap Use Custom", "Cap Material"))
+_cutstyle_cache = {"SECTION": [], "VOLCUT": []}
+_cutstyle_busy = [False]
+
+
+def cutstyle_dir(context, kind):
+    return hud_preset_std_dir(context, kind)
+
+
+def _cutstyle_items(kind, context):
+    items = []
+    try:
+        d = cutstyle_dir(context, kind)
+        if os.path.isdir(d):
+            for f in sorted(os.listdir(d), key=str.lower):
+                if f.lower().endswith(".json"):
+                    items.append((f[:-5], f[:-5], ""))
+    except Exception:
+        pass
+    if not items:
+        items = [("NONE", "— немає пресетів —", "")]
+    _cutstyle_cache[kind] = items
+    return items
+
+
+def _cutstyle_items_sec(self, context):
+    return _cutstyle_items("SECTION", context)
+
+
+def _cutstyle_items_vc(self, context):
+    return _cutstyle_items("VOLCUT", context)
+
+
+def _cutstyle_cut(context, kind):
+    return sec_get(context) if kind == "SECTION" else vc_get(context)
+
+
+def _cutstyle_targets(context, kind):
+    chk = sec_is_section if kind == "SECTION" else vc_is_cutter
+    t = [o for o in context.selected_objects if chk(o)]
+    if not t:
+        o = _cutstyle_cut(context, kind)
+        if o is not None:
+            t = [o]
+    return t
+
+
+def cutstyle_capture(cut, kind, name):
+    m = sec_mod(cut)
+    data = {"version": 1, "kind": kind, "name": name, "blender": bpy.app.version_string, "inputs": {}}
+    for it in _hud_inputs(m.node_group):
+        if it.name not in CUTSTYLE_NAMES:
+            continue
+        s = _hud_sock(m, it.identifier)
+        if s is not None:
+            data["inputs"][it.name] = {"type": it.socket_type, "value": _hud_ser(s.value)}
+    return data
+
+
+def cutstyle_apply(cut, data):
+    """Записати стиль у модифікатор Section / різака. True, якщо змінились матеріали чи перемикачі
+    Panel|Material (потрібна перебудова слотів, ⟳)."""
+    m = sec_mod(cut)
+    if m is None:
+        return False
+    ids = _hud_ids(m.node_group)
+    need = False
+    for nm, e in data.get("inputs", {}).items():
+        if nm not in CUTSTYLE_NAMES or nm not in ids:
+            continue
+        v = e.get("value")
+        if isinstance(v, dict) and "__id__" in v:
+            v = bpy.data.materials.get(v.get("name"))
+            if v is None:
+                continue
+        if nm in CUTSTYLE_REBUILD and _hud_get(m, ids[nm]) != v:
+            need = True
+        _hud_set(m, ids[nm], v)
+    cut.update_tag()
+    # драйвери в матеріалах деталей самі не прокидаються після запису в модифікатор — без цього
+    # зріз/прозорість «зникають», поки не зворухнеш Section
+    try:
+        for mat in bpy.data.materials:
+            if mat.node_tree and any(True for _ in sec_nodes(mat, cut)):
+                mat.node_tree.update_tag()
+                mat.update_tag()
+    except Exception as e:
+        print("[HUD] cutstyle tag:", e)
+    return need
+
+
+def cutstyle_apply_name(context, kind, name):
+    p = os.path.join(cutstyle_dir(context, kind), name + ".json")
+    if not os.path.exists(p):
+        return 0, "Файл пресету не знайдено"
+    with open(p, encoding="utf-8") as f:
+        data = json.load(f)
+    n = 0
+    for o in _cutstyle_targets(context, kind):
+        if cutstyle_apply(o, data):
+            (sec_refresh if kind == "SECTION" else vc_refresh)(o)
+        n += 1
+    return n, None
+
+
+def _cutstyle_update(kind, context):
+    if _cutstyle_busy[0]:
+        return
+    name = getattr(context.scene, CUTSTYLE_KINDS[kind][1], "NONE")
+    if name in ("", "NONE"):
+        return
+    cutstyle_apply_name(context, kind, name)
+
+
+def _cutstyle_update_sec(self, context):
+    _cutstyle_update("SECTION", context)
+
+
+def _cutstyle_update_vc(self, context):
+    _cutstyle_update("VOLCUT", context)
+
+
+def _cutstyle_set(context, kind, name):
+    _cutstyle_busy[0] = True
+    try:
+        setattr(context.scene, CUTSTYLE_KINDS[kind][1], name)
+    finally:
+        _cutstyle_busy[0] = False
+
+
+class HUD_OT_cutstyle_save(bpy.types.Operator):
+    """Зберегти вигляд (Ghost, Ghost Wire, Cut Edge, Cut Fill) активного Section / різака як пресет"""
+    bl_idname = "hud.cutstyle_save"
+    bl_label = "Save Style Preset"
+
+    kind: bpy.props.StringProperty(default="SECTION", options={'HIDDEN'})
+    preset_name: bpy.props.StringProperty(name="Назва", default="My Style")
+
+    def invoke(self, context, event):
+        cur = getattr(context.scene, CUTSTYLE_KINDS[self.kind][1], "NONE")
+        if cur and cur != "NONE":
+            self.preset_name = cur
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        cut = _cutstyle_cut(context, self.kind)
+        if cut is None:
+            self.report({'ERROR'}, "Немає активного Section / різака")
+            return {'CANCELLED'}
+        name = re.sub(r'[\\/:*?"<>|]', "_", self.preset_name).strip()
+        if not name:
+            return {'CANCELLED'}
+        d = cutstyle_dir(context, self.kind)
+        os.makedirs(d, exist_ok=True)
+        p = os.path.join(d, name + ".json")
+        existed = os.path.exists(p)
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(cutstyle_capture(cut, self.kind, name), f, ensure_ascii=False, indent=2)
+        _cutstyle_set(context, self.kind, name)
+        self.report({'INFO'}, ("Перезаписано: " if existed else "Збережено: ") + name)
+        return {'FINISHED'}
+
+
+class HUD_OT_cutstyle_apply(bpy.types.Operator):
+    """Застосувати вибраний пресет до виділених Section / різаків (без виділення: до вибраного в панелі)"""
+    bl_idname = "hud.cutstyle_apply"
+    bl_label = "Apply Style Preset"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    kind: bpy.props.StringProperty(default="SECTION", options={'HIDDEN'})
+
+    def execute(self, context):
+        name = getattr(context.scene, CUTSTYLE_KINDS[self.kind][1], "NONE")
+        if name in ("", "NONE"):
+            self.report({'WARNING'}, "Пресет не вибрано")
+            return {'CANCELLED'}
+        n, err = cutstyle_apply_name(context, self.kind, name)
+        if err:
+            self.report({'ERROR'}, err)
+            return {'CANCELLED'}
+        self.report({'INFO'}, f"Пресет «{name}» → {n}")
+        return {'FINISHED'}
+
+
+class HUD_OT_cutstyle_delete(bpy.types.Operator):
+    """Прибрати пресет (файл переноситься в підпапку _deleted)"""
+    bl_idname = "hud.cutstyle_delete"
+    bl_label = "Delete Style Preset"
+
+    kind: bpy.props.StringProperty(default="SECTION", options={'HIDDEN'})
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_confirm(self, event)
+
+    def execute(self, context):
+        name = getattr(context.scene, CUTSTYLE_KINDS[self.kind][1], "NONE")
+        if name in ("", "NONE"):
+            return {'CANCELLED'}
+        d = cutstyle_dir(context, self.kind)
+        src = os.path.join(d, name + ".json")
+        if os.path.exists(src):
+            dd = os.path.join(d, "_deleted")
+            os.makedirs(dd, exist_ok=True)
+            os.replace(src, os.path.join(dd, f"{name}_{time.strftime('%Y%m%d_%H%M%S')}.json"))
+        items = _cutstyle_items(self.kind, context)
+        _cutstyle_set(context, self.kind, items[0][0])
+        self.report({'INFO'}, f"Пресет «{name}» перенесено в _deleted")
+        return {'FINISHED'}
+
+
+class HUD_OT_cutstyle_folder(bpy.types.Operator):
+    """Відкрити папку пресетів"""
+    bl_idname = "hud.cutstyle_folder"
+    bl_label = "Open Presets Folder"
+
+    kind: bpy.props.StringProperty(default="SECTION", options={'HIDDEN'})
+
+    def execute(self, context):
+        d = cutstyle_dir(context, self.kind)
+        os.makedirs(d, exist_ok=True)
+        try:
+            os.startfile(d)
+        except Exception:
+            bpy.ops.wm.path_open(filepath=d)
+        return {'FINISHED'}
+
+
+def _cutstyle_row(layout, sc, kind):
+    r = layout.row(align=True)
+    r.prop(sc, CUTSTYLE_KINDS[kind][1], text="", icon='PRESET')
+    for idn, ic in (("hud.cutstyle_apply", 'IMPORT'), ("hud.cutstyle_save", 'ADD'),
+                    ("hud.cutstyle_delete", 'TRASH'), ("hud.cutstyle_folder", 'FILE_FOLDER')):
+        r.operator(idn, text="", icon=ic).kind = kind
+
+
+cutstyle_classes = (HUD_OT_cutstyle_save, HUD_OT_cutstyle_apply, HUD_OT_cutstyle_delete, HUD_OT_cutstyle_folder)
+
+
 sec_classes = (
     HUD_OT_section_add,
     HUD_OT_section_apply,
     HUD_OT_section_remove,
     HUD_OT_section_refresh,
+    HUD_OT_resync_local_mats,
     OBJECT_PT_RossSectionPanel,
-)
+) + cutstyle_classes
 
 
 def sec_register():
@@ -4263,6 +4792,10 @@ def sec_register():
         bpy.utils.register_class(cls)
     bpy.types.Scene.hud_section = bpy.props.PointerProperty(
         name="Section", type=bpy.types.Object, poll=lambda self, o: sec_is_section(o))
+    bpy.types.Scene.hud_sec_preset = bpy.props.EnumProperty(
+        name="Section Style", items=_cutstyle_items_sec, update=_cutstyle_update_sec)
+    bpy.types.Scene.hud_vc_preset = bpy.props.EnumProperty(
+        name="Volume Cut Style", items=_cutstyle_items_vc, update=_cutstyle_update_vc)
     if _sec_wire_mat_handler not in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.append(_sec_wire_mat_handler)
 
@@ -4272,6 +4805,9 @@ def sec_unregister():
         bpy.app.handlers.depsgraph_update_post.remove(_sec_wire_mat_handler)
     if hasattr(bpy.types.Scene, "hud_section"):
         del bpy.types.Scene.hud_section
+    for _p in ("hud_sec_preset", "hud_vc_preset"):
+        if hasattr(bpy.types.Scene, _p):
+            delattr(bpy.types.Scene, _p)
     for cls in reversed(sec_classes):
         bpy.utils.unregister_class(cls)
 
@@ -5130,6 +5666,7 @@ class HUD_OT_vc_apply(bpy.types.Operator):
         if not objs:
             self.report({'WARNING'}, "Виділи деталі (і різак активним останнім)")
             return {'CANCELLED'}
+        hud_localize_mats(objs)
         mats = []
         for o in objs:
             for s in o.material_slots:
@@ -5240,6 +5777,7 @@ class OBJECT_PT_RossVolumeCutPanel(bpy.types.Panel):
                     if sk is not None:
                         c.prop(sk, "value", text=lab or nm)
 
+            _cutstyle_row(box, sc, "VOLCUT")
             cur = _hud_get(m, ids["Shape"])
             sr = box.row(align=True)
             for i, (nm, ic) in enumerate(VC_SHAPES):
@@ -5304,6 +5842,7 @@ class OBJECT_PT_RossVolumeCutPanel(bpy.types.Panel):
         r.operator("hud.vc_apply", icon='SELECT_SUBTRACT')
         r.operator("hud.vc_remove", text="", icon='X')
         r.operator("hud.vc_refresh", text="", icon='FILE_REFRESH')
+        r.operator("hud.resync_local_mats", text="", icon='LIBRARY_DATA_OVERRIDE')
         if cut is not None:
             nm = sum(len(sec_nodes(mt, cut)) for mt in bpy.data.materials)
             npart = sum(len(vc_part_mods(o, cut)) for o in bpy.data.objects)
@@ -6525,7 +7064,19 @@ def exm_unregister():
         bpy.utils.unregister_class(cls)
 
 
+_RP_EMBEDDED = [False]
+
+
 def register():
+    _RP_EMBEDDED[0] = False
+    if hasattr(bpy.types.Scene, "rost_rp"):
+        print("[Rost Tools] Окремий аддон rost_render_passes уже активний — вбудований Render Passes пропущено.")
+    else:
+        from . import render_passes as _rp
+        _rp.register()
+        _RP_EMBEDDED[0] = True
+    from . import reveal_passes as _rv
+    _rv.register()
     bpy.utils.register_class(CADRIG_Settings)
     bpy.types.Scene.cadrig_settings = bpy.props.PointerProperty(type=CADRIG_Settings)
     bpy.types.Scene.fx_original_bg_strength = bpy.props.FloatProperty(name="Original BG Strength", default=1.0)
@@ -6548,7 +7099,13 @@ def register():
     exm_register()
 
 def unregister():
+    if _RP_EMBEDDED[0]:
+        from . import render_passes as _rp
+        _rp.unregister()
+        _RP_EMBEDDED[0] = False
     exm_unregister()
+    from . import reveal_passes as _rv
+    _rv.unregister()
     lgt_unregister()
     fui_unregister()
     sty_unregister()

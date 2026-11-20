@@ -1,0 +1,7 @@
+*.bak*
+*.zip.bak*
+__pycache__/
+*.pyc
+rost_production_tools_4.3.0.zip
+.DS_Store
+*.blend1

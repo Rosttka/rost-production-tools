@@ -1,0 +1,497 @@
+{
+  "version": 1,
+  "name": "Big_Numbers_1",
+  "blender": "5.2.1 LTS",
+  "modifiers": [
+    {
+      "name": "Ring · Band",
+      "group": "GN_HUD_RingLayer",
+      "show_viewport": true,
+      "show_render": true,
+      "inputs": {
+        "Type": {
+          "type": "NodeSocketMenu",
+          "value": "Dashes"
+        },
+        "Radius (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 55.869998931884766
+        },
+        "Width (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 3.999999761581421
+        },
+        "Thickness (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 0.40599995851516724
+        },
+        "Arc Length": {
+          "type": "NodeSocketFloat",
+          "value": 6.2831854820251465
+        },
+        "Start Angle": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Segments": {
+          "type": "NodeSocketInt",
+          "value": 24
+        },
+        "Duty": {
+          "type": "NodeSocketFloat",
+          "value": 0.5
+        },
+        "Fill": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Outline": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Instance Object": {
+          "type": "NodeSocketObject",
+          "value": null
+        },
+        "Instance Collection": {
+          "type": "NodeSocketCollection",
+          "value": null
+        },
+        "Instance Scale": {
+          "type": "NodeSocketFloat",
+          "value": 1.0
+        },
+        "Align to Circle": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Random Scale": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Random Rotation": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Seed": {
+          "type": "NodeSocketInt",
+          "value": 0
+        },
+        "Keep Own Materials": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Rotation Speed": {
+          "type": "NodeSocketFloat",
+          "value": 0.2396336942911148
+        },
+        "Pulse": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Pulse Speed": {
+          "type": "NodeSocketFloat",
+          "value": 0.30000001192092896
+        },
+        "Pulse Offset": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Preview Full": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Reveal": {
+          "type": "NodeSocketMenu",
+          "value": "Sweep"
+        },
+        "Start Frame": {
+          "type": "NodeSocketFloat",
+          "value": 5.0
+        },
+        "Duration": {
+          "type": "NodeSocketFloat",
+          "value": 10.0
+        },
+        "Use Out": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Out Frame": {
+          "type": "NodeSocketFloat",
+          "value": 100.0
+        },
+        "Out Duration": {
+          "type": "NodeSocketFloat",
+          "value": 12.0
+        },
+        "Flicker": {
+          "type": "NodeSocketFloat",
+          "value": 0.6000000238418579
+        },
+        "Line Material": {
+          "type": "NodeSocketMaterial",
+          "value": {
+            "__id__": "Material",
+            "name": "HUD_Line"
+          }
+        },
+        "Fill Material": {
+          "type": "NodeSocketMaterial",
+          "value": {
+            "__id__": "Material",
+            "name": "HUD_Fill_Stripes"
+          }
+        },
+        "Use Style": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "HUD Style": {
+          "type": "NodeSocketObject",
+          "value": null
+        }
+      }
+    },
+    {
+      "name": "GN_HUD_RingLayer",
+      "group": "GN_HUD_RingLayer",
+      "show_viewport": true,
+      "show_render": true,
+      "inputs": {
+        "Type": {
+          "type": "NodeSocketMenu",
+          "value": "Line"
+        },
+        "Radius (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 71.05000305175781
+        },
+        "Width (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 4.0
+        },
+        "Thickness (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 3.4800000190734863
+        },
+        "Arc Length": {
+          "type": "NodeSocketFloat",
+          "value": 6.2831854820251465
+        },
+        "Start Angle": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Segments": {
+          "type": "NodeSocketInt",
+          "value": 24
+        },
+        "Duty": {
+          "type": "NodeSocketFloat",
+          "value": 0.5
+        },
+        "Fill": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Outline": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Instance Object": {
+          "type": "NodeSocketObject",
+          "value": null
+        },
+        "Instance Collection": {
+          "type": "NodeSocketCollection",
+          "value": null
+        },
+        "Instance Scale": {
+          "type": "NodeSocketFloat",
+          "value": 1.0
+        },
+        "Align to Circle": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Random Scale": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Random Rotation": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Seed": {
+          "type": "NodeSocketInt",
+          "value": 0
+        },
+        "Keep Own Materials": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Rotation Speed": {
+          "type": "NodeSocketFloat",
+          "value": 0.3490658402442932
+        },
+        "Pulse": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Pulse Speed": {
+          "type": "NodeSocketFloat",
+          "value": 0.30000001192092896
+        },
+        "Pulse Offset": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Preview Full": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Reveal": {
+          "type": "NodeSocketMenu",
+          "value": "Sweep"
+        },
+        "Start Frame": {
+          "type": "NodeSocketFloat",
+          "value": 1.0
+        },
+        "Duration": {
+          "type": "NodeSocketFloat",
+          "value": 14.0
+        },
+        "Use Out": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Out Frame": {
+          "type": "NodeSocketFloat",
+          "value": 100.0
+        },
+        "Out Duration": {
+          "type": "NodeSocketFloat",
+          "value": 12.0
+        },
+        "Flicker": {
+          "type": "NodeSocketFloat",
+          "value": 0.4000000059604645
+        },
+        "Line Material": {
+          "type": "NodeSocketMaterial",
+          "value": {
+            "__id__": "Material",
+            "name": "HUD_Line"
+          }
+        },
+        "Fill Material": {
+          "type": "NodeSocketMaterial",
+          "value": {
+            "__id__": "Material",
+            "name": "HUD_Fill_Stripes"
+          }
+        },
+        "Use Style": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "HUD Style": {
+          "type": "NodeSocketObject",
+          "value": null
+        }
+      }
+    },
+    {
+      "name": "Callout Label",
+      "group": "GN_HUD_CalloutLabel",
+      "show_viewport": true,
+      "show_render": true,
+      "inputs": {
+        "Label": {
+          "type": "NodeSocketObject",
+          "value": {
+            "__id__": "Object",
+            "name": "Callout_03_Label"
+          }
+        },
+        "Faces Camera": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Text": {
+          "type": "NodeSocketString",
+          "value": "1"
+        },
+        "Font": {
+          "type": "NodeSocketFont",
+          "value": {
+            "__id__": "VectorFont",
+            "name": "Albert Sans Bold"
+          }
+        },
+        "Font Size (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 250.0
+        },
+        "Text Gap (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 12.90999984741211
+        },
+        "Shelf Padding (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 13.360000610351562
+        },
+        "Line Spacing": {
+          "type": "NodeSocketFloat",
+          "value": 0.029999999329447746
+        },
+        "Thickness (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 1.5099999904632568
+        },
+        "Leader Gap (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 2.7100000381469727
+        },
+        "Leader Style": {
+          "type": "NodeSocketMenu",
+          "value": "Elbow"
+        },
+        "Elbow (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 38.790000915527344
+        },
+        "Dashed": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Dash (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 24.98999786376953
+        },
+        "Dash Gap (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 10.25999927520752
+        },
+        "End Dots": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "Dot Size (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 10.130000114440918
+        },
+        "Preview Full": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Start Frame": {
+          "type": "NodeSocketFloat",
+          "value": 20.0
+        },
+        "Leader Duration": {
+          "type": "NodeSocketFloat",
+          "value": 10.0
+        },
+        "Type Speed": {
+          "type": "NodeSocketFloat",
+          "value": 1.0
+        },
+        "Use Out": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Out Frame": {
+          "type": "NodeSocketFloat",
+          "value": 95.0
+        },
+        "Out Duration": {
+          "type": "NodeSocketFloat",
+          "value": 12.0
+        },
+        "Line Material": {
+          "type": "NodeSocketMaterial",
+          "value": {
+            "__id__": "Material",
+            "name": "HUD_Line"
+          }
+        },
+        "Use Style": {
+          "type": "NodeSocketBool",
+          "value": true
+        },
+        "HUD Style": {
+          "type": "NodeSocketObject",
+          "value": null
+        }
+      }
+    },
+    {
+      "name": "Callout Settings",
+      "group": "GN_HUD_CalloutSettings",
+      "show_viewport": true,
+      "show_render": true,
+      "inputs": {
+        "Align to Camera": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Enable": {
+          "type": "NodeSocketBool",
+          "value": false
+        },
+        "Margin (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 4.0
+        },
+        "Depth (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 44.97999954223633
+        },
+        "Softness (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Hole Opacity": {
+          "type": "NodeSocketFloat",
+          "value": 0.0
+        },
+        "Ghost": {
+          "type": "NodeSocketFloat",
+          "value": 1.0
+        },
+        "Ghost Strength": {
+          "type": "NodeSocketFloat",
+          "value": 3.0
+        },
+        "Ghost Edge": {
+          "type": "NodeSocketFloat",
+          "value": 3.0
+        },
+        "Ghost Fill": {
+          "type": "NodeSocketFloat",
+          "value": 0.15000000596046448
+        },
+        "Rim Width (mm)": {
+          "type": "NodeSocketFloat",
+          "value": 0.5
+        },
+        "Rim Color": {
+          "type": "NodeSocketColor",
+          "value": [
+            0.25,
+            0.75,
+            1.0,
+            1.0
+          ]
+        },
+        "Rim Strength": {
+          "type": "NodeSocketFloat",
+          "value": 4.0
+        }
+      }
+    }
+  ]
+}
